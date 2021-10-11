@@ -30,7 +30,17 @@ def transform_dataset(df):
     #del df_binary['race']
     #del df_binary['is_recid']
 
+    print("#")
+    print("#")
+    print("#")
+    print("COMPAS DATASET SHAPE")
+    print("#")
+    print("#")
+    print("#")
     print(df_binary.shape)
+    print(" ")
+    print(" ")
+    print(" ")
 
     # set sparse to False to return dense matrix after transformation and keep all dimensions homogeneous
     encod = preprocessing.OneHotEncoder(sparse=False)
@@ -116,7 +126,17 @@ def transform_dataset_census(df):
     if df_replace.shape == df.shape:
         raise AssertionError("The removal of na values failed")
 
+    print("#")
+    print("#")
+    print("#")
+    print("CENSUS DATASET SHAPE")
+    print("#")
+    print("#")
+    print("#")
     print(df_replace.shape)
+    print(" ")
+    print(" ")
+    print(" ")
 
     #transform other features
     #feature age to normalize
@@ -180,7 +200,18 @@ def transform_dataset_credit(df):
     df_replace = df.replace(to_replace="?",value=np.nan)
     df_replace.dropna(inplace=True, axis=1)
 
+    print("#")
+    print("#")
+    print("#")
+    print("CREDIT DATASET SHAPE")
+    print("#")
+    print("#")
+    print("#")
     print(df_replace.shape)
+    print(" ")
+    print(" ")
+    print(" ")
+
 
     #transform other features
     #feature age to normalize
@@ -206,7 +237,17 @@ def transform_dataset_credit(df):
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
+    print("#")
+    print("#")
+    print("#")
+    print("CENSUS PROTECTED ATTRIBUTE")
+    print("#")
+    print("#")
+    print("#")
     print(S)
+    print(" ")
+    print(" ")
+    print(" ")
 
     return df_binary_encoded, Y, S, Y_true
 
