@@ -310,7 +310,17 @@ def main(args):
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
 
+    print("#")
+    print("#")
+    print("#")
+    print("MEAN")
+    print("#")
+    print("#")
+    print("#")
     print(np.mean(Y))
+    print(" ")
+    print(" ")
+    print(" ")
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
@@ -340,14 +350,34 @@ def main(args):
     _, results = train_and_evaluate(train_loader, val_loader, test_loader, device, args, input_shape=x_tensor.shape[1],
                                     grl_lambda=0)
 
+    print("#")
+    print("#")
+    print("#")
+    print("RESULTS")
+    print("#")
+    print("#")
+    print("#")
     print(results)
+    print(" ")
+    print(" ")
+    print(" ")
 
     result = get_metrics(results, args, threshold, 0)
     global_results.append(result)
 
     df = pd.DataFrame(global_results)
 
+    print("#")
+    print("#")
+    print("#")
+    print("DF -1")
+    print("#")
+    print("#")
+    print("#")
     print(df)
+    print(" ")
+    print(" ")
+    print(" ")
 
     t_main = trange(args.iterations, desc="Attack", leave=False, position=0)
 
@@ -388,7 +418,17 @@ def main(args):
 
         df = pd.DataFrame(global_results)
 
+        print("#")
+        print("#")
+        print("#")
+        print("DF {}".format(i))
+        print("#")
+        print("#")
+        print("#")
         print(df)
+        print(" ")
+        print(" ")
+        print(" ")
 
     # Finally save experimental data if a save dir is specified
     if args.save_dir:
