@@ -229,10 +229,13 @@ def train_and_evaluate(train_loader: DataLoader,
                             "validation_loss": validation_loss}, refresh=False)  # print last metrics
 
     if args.show_graphs:
-        plt.plot(range(len(training_losses)), training_losses)
-        plt.plot(range(len(validation_losses)), validation_losses)
+        plt.plot(range(len(training_losses)), training_losses, label="Training Loss")
+        plt.plot(range(len(validation_losses)), validation_losses, label="Validation Loss")
         # plt.scatter(x_tensor, y_out.detach().numpy())
-        plt.ylabel('some numbers')
+        plt.title('Loss vs Epoch')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend()
         plt.show()
 
     with torch.no_grad():
