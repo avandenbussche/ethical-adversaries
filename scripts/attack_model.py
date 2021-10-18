@@ -6,6 +6,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+protected_attributes = ['race', 'sex']
+num_protected_attributes = len(protected_attributes)
+
+
 def transform_dataset(df):
     """
 
@@ -26,7 +30,8 @@ def transform_dataset(df):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary['race']
+    S = df_binary[protected_attributes]
+    #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
 

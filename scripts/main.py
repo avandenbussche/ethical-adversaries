@@ -5,7 +5,8 @@ from attack_model import \
     transform_dataset, \
     transform_dataset_census, \
     transform_dataset_credit, \
-    attack_keras_model
+    attack_keras_model, \
+    num_protected_attributes
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -280,6 +281,7 @@ def train_and_evaluate(train_loader: DataLoader,
     df['true'] = outcome.cpu().numpy()
     df['compas'] = compas.cpu().numpy()
     df['race'] = protected_results.cpu().numpy()[:, 0]
+    df['sex'] = protected_results.cpu().numpy()[:, 1]
     if grl_lambda is not None and grl_lambda != 0:
         df['race_hat'] = protected.cpu().numpy()[:, 0]
 
@@ -299,6 +301,17 @@ def main(args):
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
         df_binary, Y, S, Y_true = transform_dataset(df)
+        print("#")
+        print("#")
+        print("#")
+        print("PROTECTED ATTRIBUTES")
+        print("#")
+        print("#")
+        print("#")
+        print(S)
+        print(" ")
+        print(" ")
+        print(" ")
         Y = Y.to_numpy()
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     elif args.dataset == "adult":
@@ -329,7 +342,7 @@ def main(args):
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
-    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, 1)).toarray())
+    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, num_protected_attributes)).toarray())
 
     dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
 
@@ -414,8 +427,10 @@ def main(args):
         y_train_tensor = torch.cat(
             (y_train_tensor, torch.tensor(result_class.reshape(-1, 1).astype(np.float32)).clamp(0, 10)))
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
-        s = np.random.randint(2, size=len(result_class))
-        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.array([s, 1 - s]).T.astype(np.float64))))
+        
+        # Generate array of random s values, one column per number of protected attributes
+        s = np.random.randint(2, size=(len(result_class), num_protected_attributes))
+        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*num_protected_attributes).astype(np.float64))))
 
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor, l_train_tensor, s_train_tensor)
         train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
