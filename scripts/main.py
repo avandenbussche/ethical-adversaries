@@ -6,7 +6,7 @@ from attack_model import \
     transform_dataset_census, \
     transform_dataset_credit, \
     attack_keras_model, \
-    num_protected_attributes
+    protected_attributes
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -114,13 +114,16 @@ def get_metrics(results, args, threshold, fraction):
         / bm(results).P(pred=lambda x: x > threshold).given(
             race=1))
 
+    diff_fair = computeSmoothedEDF(results[protected_attributes].values, results['true'].values)
+
     cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
                          predict_vector=(results['pred'] > threshold).values)
     if args.dataset == 'compas':
         cm_high_risk = ConfusionMatrix(actual_vector=(results['compas'] > 8).values,
                              predict_vector=(results['pred'] > 8).values)
 
-        result = {"DP": dem_parity,
+        result = {"DF": diff_fair,
+                  "DP": dem_parity,
                   "EO": eq_op,
                   "DP ratio": dem_parity_ratio,
                   "acc": cm.Overall_ACC,
@@ -134,7 +137,8 @@ def get_metrics(results, args, threshold, fraction):
                   "adversarial_fraction": fraction
                   }
     else:
-        result = {"DP": dem_parity,
+        result = {"DF": diff_fair,
+                  "DP": dem_parity,
                   "EO": eq_op,
                   "DP ratio": dem_parity_ratio,
                   "acc": cm.Overall_ACC,
@@ -342,7 +346,7 @@ def main(args):
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
-    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, num_protected_attributes)).toarray())
+    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, len(protected_attributes))).toarray())
 
     dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
 
@@ -429,8 +433,8 @@ def main(args):
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
         
         # Generate array of random s values, one column per number of protected attributes
-        s = np.random.randint(2, size=(len(result_class), num_protected_attributes))
-        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*num_protected_attributes).astype(np.float64))))
+        s = np.random.randint(2, size=(len(result_class), len(protected_attributes)))
+        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*len(protected_attributes)).astype(np.float64))))
 
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor, l_train_tensor, s_train_tensor)
         train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)

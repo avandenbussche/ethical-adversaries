@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 protected_attributes = ['race', 'sex']
-num_protected_attributes = len(protected_attributes)
 
 
 def transform_dataset(df):
