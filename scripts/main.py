@@ -27,6 +27,8 @@ from pycm import ConfusionMatrix
 
 from secml.array.c_array import CArray
 
+from Differential_Fairness.differential_fairness import computeSmoothedEDF
+
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
 
