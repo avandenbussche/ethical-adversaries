@@ -114,7 +114,7 @@ def get_metrics(results, args, threshold, fraction):
         / bm(results).P(pred=lambda x: x > threshold).given(
             race=1))
 
-    diff_fair = computeSmoothedEDF(results[protected_attributes].values, results['true'].values)
+    diff_fair = computeSmoothedEDF(results[protected_attributes].astype(int).values, (results['pred'] > threshold).astype(int).values)
 
     cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
                          predict_vector=(results['pred'] > threshold).values)
