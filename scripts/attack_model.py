@@ -5,8 +5,9 @@ from sklearn import preprocessing
 import logging
 logger = logging.getLogger(__name__)
 
-
-protected_attributes = ['race', 'sex']
+#for now use compass dataset
+#let's add age as wel for fun
+protected_attributes = ['race', 'sex','age']
 
 
 def transform_dataset(df):
