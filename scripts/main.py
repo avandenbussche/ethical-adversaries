@@ -114,7 +114,7 @@ def get_metrics(results, args, threshold, fraction):
         / bm(results).P(pred=lambda x: x > threshold).given(
             race=1))
 
-    diff_fair = computeSmoothedEDF(results[protected_attributes].values, results['true'].values)
+    diff_fair = computeSmoothedEDF(results[protected_attributes].astype(int).values, (results['pred'] > threshold).astype(int).values)
 
     cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
                          predict_vector=(results['pred'] > threshold).values)
@@ -480,6 +480,7 @@ def main(args):
 if __name__ == '__main__':
     # Define arguments for cli and run main function
     parser = argparse.ArgumentParser()
+
     parser.add_argument('--epochs', default=1000, type=int)
     parser.add_argument('--iterations', help="Number of attack iterations", default=20, type=int)
     parser.add_argument('--batch-size', help="Size of each minibatch for the classifier", default=256, type=int)
@@ -488,6 +489,8 @@ if __name__ == '__main__':
     parser.add_argument('--attack-size', help="Number of adversarial points for each attack.", default=25, type=int)
     parser.add_argument('--reset-attack', help="Reuse the same model if False.", default=False, type=bool)
     parser.add_argument('--dataset', help="The data set to use; values: compas or adult", default="compas", type=str)
+     #add argument for compas multiplle categories
+    parser.add_argument('--addition',default= None, type = str)
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
     args = parser.parse_args()
     main(args)
