@@ -305,6 +305,8 @@ def main(args):
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
         df_binary, Y, S, Y_true = transform_dataset(df)
+        if(args.additiions == "sex"):
+            print("Sex gender is also selected as protected attribute")
         print("#")
         print("#")
         print("#")
