@@ -7,7 +7,8 @@ from attack_model import \
     transform_dataset_credit, \
     attack_keras_model, \
     protected_attributes_for_optimization, \
-    protected_attributes_for_comparison
+    protected_attributes_for_comparison, \
+    protected_attributes_all
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -116,7 +117,6 @@ def get_metrics(results, args, threshold, fraction):
             race=1))
 
     diff_fair_optimized = computeSmoothedEDF(results[protected_attributes_for_optimization].astype(int).values, (results['pred'] > threshold).astype(int).values)
-    diff_fair_comparison = computeSmoothedEDF(results[protected_attributes_for_comparison].astype(int).values, (results['pred'] > threshold).astype(int).values)
 
     cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
                          predict_vector=(results['pred'] > threshold).values)
@@ -124,8 +124,7 @@ def get_metrics(results, args, threshold, fraction):
         cm_high_risk = ConfusionMatrix(actual_vector=(results['compas'] > 8).values,
                              predict_vector=(results['pred'] > 8).values)
 
-        result = {"DF (optimized)": diff_fair_optimized,
-                  "DF (comparison)": diff_fair_comparison,
+        result = {"DF (optimized: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
                   "DP": dem_parity,
                   "EO": eq_op,
                   "DP ratio": dem_parity_ratio,
@@ -139,6 +138,13 @@ def get_metrics(results, args, threshold, fraction):
                   "f1_high_risk": cm_high_risk.F1_Macro,
                   "adversarial_fraction": fraction
                   }
+
+        for s in protected_attributes_for_comparison:
+                diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
+                key = "DF (comparison: {})".format(s)
+                result.insert(1, key)
+                result[key] = diff_fair_s
+
     else:
         result = {"DF": diff_fair,
                   "DP": dem_parity,
@@ -311,11 +317,16 @@ def main(args):
         print("#")
         print("#")
         print("#")
-        print("PROTECTED ATTRIBUTES")
+        print("ALL PROTECTED ATTRIBUTES")
         print("#")
         print("#")
         print("#")
         print(S)
+        print("#")
+        print("#")
+        print("#")
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
         print(" ")
         print(" ")
         print(" ")

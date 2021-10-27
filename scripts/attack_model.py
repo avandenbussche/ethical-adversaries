@@ -6,8 +6,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-protected_attributes_for_optimization = ['race']
-protected_attributes_for_metrics = ['race', 'sex']
+protected_attributes_for_optimization = np.array(['race'])
+protected_attributes_for_comparison = np.array([['sex'], ['race'], ['sex', 'race']])
+protected_attributes_all = list(set(protected_attributes_for_optimization.flatten().tolist() + protected_attributes_for_comparison.flatten().tolist()))
 
 
 def transform_dataset(df):
@@ -30,7 +31,7 @@ def transform_dataset(df):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary[protected_attributes_for_optimization]
+    S = df_binary[protected_attributes_all]
     #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
