@@ -6,7 +6,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-protected_attributes = ['race', 'sex']
+protected_attributes_for_optimization = ['race']
+protected_attributes_for_metrics = ['race', 'sex']
 
 
 def transform_dataset(df):
@@ -29,7 +30,7 @@ def transform_dataset(df):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary[protected_attributes]
+    S = df_binary[protected_attributes_for_optimization]
     #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
