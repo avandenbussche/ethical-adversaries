@@ -31,6 +31,7 @@ from pycm import ConfusionMatrix
 
 from secml.array.c_array import CArray
 
+from math import exp
 from Differential_Fairness.differential_fairness import computeSmoothedEDF
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
@@ -137,13 +138,16 @@ def get_metrics(results, args, threshold, fraction):
                   "acc_ci_max_high_risk": cm_high_risk.CI95[1],
                   "f1_high_risk": cm_high_risk.F1_Macro,
                   "adversarial_fraction": fraction,
-                  "DF (optimized: {})".format(protected_attributes_for_optimization): diff_fair_optimized
+                  "DF (O: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
+                  "DFR (O: {})".format(protected_attributes_for_optimization): exp(-diff_fair_optimized),
                   }
 
         for s in protected_attributes_for_comparison:
             diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
-            key = "DF (comparison: {})".format(s)
+            key = "DF (C: {})".format(s)
+            key_pp = "DFR (C: {})".format(s)
             result[key] = diff_fair_s
+            result[key_pp] = exp(-diff_fair_s)
 
     else:
         result = {"DP": dem_parity,
