@@ -149,6 +149,16 @@ def get_metrics(results, args, threshold, fraction):
             result[key] = diff_fair_s
             result[key_pp] = exp(-diff_fair_s)
 
+        for s1 in range(2):
+            for r1 in range(2):
+                for s2 in range(2):
+                    for r2 in range(2):
+                        if s1 == s2 and r1 == r2:
+                            continue
+                        key = "DPR (S{}R{}/S{}R{})".format(s1, r1, s2, r2)
+                        result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(race=r1, sex=s1)
+                                         / bm(results).P(pred=lambda x: x > threshold).given(race=r2, sex=s2) )
+
     else:
         result = {"DP": dem_parity,
                   "EO": eq_op,
