@@ -60,7 +60,7 @@ def transform_dataset(df):
     encod = preprocessing.OneHotEncoder(sparse=False)
 
     data_to_encode = df_binary.to_numpy()
-    feat_to_encode = data_to_encode[:, 0]
+    feat_to_encode = data_to_encode[:, 0] == "Male"
     # print(feat_to_encode)
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
