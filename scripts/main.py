@@ -8,7 +8,8 @@ from attack_model import \
     attack_keras_model, \
     protected_attributes_for_optimization, \
     protected_attributes_for_comparison, \
-    protected_attributes_all
+    protected_attributes_all, \
+    protected_attributes_all_indices_dict
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -124,8 +125,7 @@ def get_metrics(results, args, threshold, fraction):
         cm_high_risk = ConfusionMatrix(actual_vector=(results['compas'] > 8).values,
                              predict_vector=(results['pred'] > 8).values)
 
-        result = {"DF (optimized: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
-                  "DP": dem_parity,
+        result = {"DP": dem_parity,
                   "EO": eq_op,
                   "DP ratio": dem_parity_ratio,
                   "acc": cm.Overall_ACC,
@@ -136,18 +136,17 @@ def get_metrics(results, args, threshold, fraction):
                   "acc_ci_min_high_risk": cm_high_risk.CI95[0],
                   "acc_ci_max_high_risk": cm_high_risk.CI95[1],
                   "f1_high_risk": cm_high_risk.F1_Macro,
-                  "adversarial_fraction": fraction
+                  "adversarial_fraction": fraction,
+                  "DF (optimized: {})".format(protected_attributes_for_optimization): diff_fair_optimized
                   }
 
         for s in protected_attributes_for_comparison:
-                diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
-                key = "DF (comparison: {})".format(s)
-                result.insert(1, key)
-                result[key] = diff_fair_s
+            diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
+            key = "DF (comparison: {})".format(s)
+            result[key] = diff_fair_s
 
     else:
-        result = {"DF": diff_fair,
-                  "DP": dem_parity,
+        result = {"DP": dem_parity,
                   "EO": eq_op,
                   "DP ratio": dem_parity_ratio,
                   "acc": cm.Overall_ACC,
@@ -253,7 +252,6 @@ def train_and_evaluate(train_loader: DataLoader,
         plt.xlabel('Epoch')
         plt.legend()
         plt.show()
-
     with torch.no_grad():
         test_losses = []
         test_results = []
@@ -266,12 +264,12 @@ def train_and_evaluate(train_loader: DataLoader,
                 yhat, s_hat = model(x_test)
                 test_loss = (criterion(y_test, yhat) + criterion_bias(s_true, s_hat.argmax(dim=1))).item()
                 test_losses.append(val_loss)
-                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "s_hat": s_hat})
+                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "s_hat": s_hat, "x": x_test})
             else:
                 yhat = model(x_test)
                 test_loss = (criterion(y_test, yhat)).item()
                 test_losses.append(val_loss)
-                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true})
+                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "x": x_test})
 
         # print({"Test loss": np.mean(test_losses)})
 
@@ -279,6 +277,7 @@ def train_and_evaluate(train_loader: DataLoader,
     outcome = test_results[0]['y_true']
     compas = test_results[0]['y_compas']
     protected_results = test_results[0]['s']
+    x = test_results[0]['x']
     if grl_lambda is not None and grl_lambda != 0:
         protected = test_results[0]['s_hat']
     for r in test_results[1:]:
@@ -286,6 +285,7 @@ def train_and_evaluate(train_loader: DataLoader,
         outcome = torch.cat((outcome, r['y_true']))
         compas = torch.cat((compas, r['y_compas']))
         protected_results = torch.cat((protected_results, r['s']))
+        x = torch.cat((x, r['x']))
         if grl_lambda is not None and grl_lambda != 0:
             protected = torch.cat((protected, r['s_hat']))
 
@@ -293,10 +293,13 @@ def train_and_evaluate(train_loader: DataLoader,
 
     df['true'] = outcome.cpu().numpy()
     df['compas'] = compas.cpu().numpy()
-    df['race'] = protected_results.cpu().numpy()[:, 0]
-    df['sex'] = protected_results.cpu().numpy()[:, 1]
+    for index, protected_attribute in enumerate(protected_attributes_for_optimization):
+        df[protected_attribute] = protected_results.cpu().numpy()[:, index]
+    for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
+        df[unprotected_attribute] = x.cpu().numpy()[:, protected_attributes_all_indices_dict[unprotected_attribute]]
     if grl_lambda is not None and grl_lambda != 0:
-        df['race_hat'] = protected.cpu().numpy()[:, 0]
+        for index, protected_attribute in enumerate(protected_attributes_for_optimization):
+            df[protected_attribute+"_hat"] = protected.cpu().numpy()[:, index]
 
     return model, df
 
