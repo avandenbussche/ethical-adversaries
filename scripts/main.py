@@ -289,6 +289,10 @@ def train_and_evaluate(train_loader: DataLoader,
         if grl_lambda is not None and grl_lambda != 0:
             protected = torch.cat((protected, r['s_hat']))
 
+    # print("Shape of x: {}".format(x.shape))
+    # print("Shape of protected_results: {}".format(protected_results.shape))
+    # print("First row of x: {}".format(x[0]))
+
     df = pd.DataFrame(data=results.cpu().numpy(), columns=['pred'])
 
     df['true'] = outcome.cpu().numpy()

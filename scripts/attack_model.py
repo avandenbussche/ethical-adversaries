@@ -106,6 +106,10 @@ def transform_dataset(df):
     for protected_attribute in protected_attributes_all:
         protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
 
+    # print("Shape of df_binary_encoded: {}".format(df_binary_encoded.shape))
+    # print("Shape of S: {}".format(S.shape))
+    # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
+
     return df_binary_encoded, Y, S, Y_true
 
 def transform_dataset_census(df):
