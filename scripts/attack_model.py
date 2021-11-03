@@ -17,10 +17,10 @@ def transform_dataset(df, protected):
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
-    considered_attributes = protected_attributes
     if protected is not None:
-        considered_attributes.append(protected)
+        protected_attributes.append(protected)
 
+    considered_attributes = protected_attributes
 
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
 
