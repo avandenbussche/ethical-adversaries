@@ -304,6 +304,7 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
+        protected = None
         if args.protected is not None:
             protected = args.protected
         df_binary, Y, S, Y_true = transform_dataset(df,protected)
