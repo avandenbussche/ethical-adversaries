@@ -22,6 +22,8 @@ import os
 import argparse
 import logging
 from torch.autograd import Function
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from bayesian_model import BayesianModel as bm
 from pycm import ConfusionMatrix
@@ -304,9 +306,9 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        protected = None
+        protected = ['race']
         if args.protected is not None:
-            protected = args.protected
+            protected.append(args.protected)
         df_binary, Y, S, Y_true = transform_dataset(df,protected)
 
         print("#")
@@ -325,6 +327,7 @@ def main(args):
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
+
         df_binary, Y, S, _ = transform_dataset_census(df)
         l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
     elif args.dataset == "german":
@@ -351,13 +354,16 @@ def main(args):
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
     s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, len(protected_attributes))).toarray())
-
-    dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
+    print("HELLO")
+    #dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
+    dataset = TensorDataset(x_tensor, y_tensor,l_tensor, s_tensor)
 
     base_size = len(dataset) // 10
     split = [7 * base_size, 1 * base_size, len(dataset) - 8 * base_size]  # Train, validation, test
 
-    train_dataset, val_dataset, test_dataset = random_split(dataset, split)
+    val_size = int(len(dataset)*0.2)
+    train_size = len(dataset)- int(len(dataset)*0.2)
+    train_dataset, val_dataset, *test_dataset = random_split(dataset, [train_size, val_size])
 
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size)

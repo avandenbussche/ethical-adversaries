@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 #for now use compass dataset
 #let's add age as wel for fun
-protected_attributes = ['race']
+#protected_attributes = ['race']
 
 
 def transform_dataset(df, protected):
@@ -24,6 +24,8 @@ def transform_dataset(df, protected):
         new_list.append(item)
 
     new_list.append(protected)
+    global protected_attributes = new_list
+    print("New List is", new_list)
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
 
     del df_binary['c_jail_in']
