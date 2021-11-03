@@ -17,8 +17,7 @@ def transform_dataset(df, protected):
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
-    if protected is not None:
-        protected_attributes.append(protected)
+    protected_attributes.append(str(protected))
 
     considered_attributes = protected_attributes
 
