@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 from sklearn import preprocessing
-import main
+#import main
 import logging
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,11 @@ def transform_dataset(df, protected):
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
-    protected_attributes = protected_attributes + protected
+    considered_attributes = protected_attributes
+    if protected is not None:
+        considered_attributes = protected_attributes + protected
+
+
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
 
     del df_binary['c_jail_in']
@@ -31,7 +35,7 @@ def transform_dataset(df, protected):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary[protected_attributes]
+    S = df_binary[considered_attributes]
     #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
@@ -391,7 +395,8 @@ def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):
 
 if __name__ == '__main__':
     df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-    df, Y, S = transform_dataset(df)
+    protected = None
+    df, Y, *S = transform_dataset(df, protected)
 
     result = attack_keras_model(df, Y=Y, S=S)
 
