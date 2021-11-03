@@ -304,7 +304,9 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true = transform_dataset(df)
+        if args.protected is not None:
+            protected = args.protected
+        df_binary, Y, S, Y_true = transform_dataset(df,protected)
         if(args.additiions == "sex"):
             print("Sex gender is also selected as protected attribute")
         print("#")
@@ -433,7 +435,7 @@ def main(args):
         y_train_tensor = torch.cat(
             (y_train_tensor, torch.tensor(result_class.reshape(-1, 1).astype(np.float32)).clamp(0, 10)))
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
-        
+
         # Generate array of random s values, one column per number of protected attributes
         s = np.random.randint(2, size=(len(result_class), len(protected_attributes)))
         s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*len(protected_attributes)).astype(np.float64))))
@@ -492,7 +494,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset-attack', help="Reuse the same model if False.", default=False, type=bool)
     parser.add_argument('--dataset', help="The data set to use; values: compas or adult", default="compas", type=str)
      #add argument for compas multiplle categories
-    parser.add_argument('--addition',default= None, type = str)
+    parser.add_argument('--protected',default= None, type = str)
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
     args = parser.parse_args()
     main(args)

@@ -8,16 +8,16 @@ logger = logging.getLogger(__name__)
 
 #for now use compass dataset
 #let's add age as wel for fun
-protected_attributes = ['race', 'sex','age']
+protected_attributes = ['race']
 
 
-def transform_dataset(df):
+def transform_dataset(df, protected):
     """
 
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
-
+    protected_attributes = protected_attributes + protected
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
 
     del df_binary['c_jail_in']
@@ -150,7 +150,7 @@ def transform_dataset_census(df):
     mi = np.amin(encoded_feature)
     ma = np.amax(encoded_feature)
     encoded_feature = (encoded_feature - mi) / (ma - mi)
-    
+
     #df_binary_encoded is the data frame containing encoded features
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -167,7 +167,7 @@ def transform_dataset_census(df):
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
-    
+
     #feature 10 and 11 are categorical
     for i in range(10,12):
         encod_feature = df_replace.iloc[:,i]
