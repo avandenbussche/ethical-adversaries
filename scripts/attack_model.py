@@ -5,21 +5,7 @@ from sklearn import preprocessing
 import logging
 logger = logging.getLogger(__name__)
 
-
-# flatten(...) from https://stackoverflow.com/a/17867797
-def flatten(A):
-    rt = []
-    for i in A:
-        if isinstance(i,list): rt.extend(flatten(i))
-        else: rt.append(i)
-    return rt
-
-protected_attributes_for_optimization = ['race']
-protected_attributes_for_comparison = [['sex'], ['sex', 'race']]
-protected_attributes_all = list(set(flatten(protected_attributes_for_optimization) + flatten(protected_attributes_for_comparison)))
-protected_attributes_all_indices_dict = {} # will be inserted by transform_dataset()
-
-def transform_dataset(df):
+def transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all):
     """
 
     :param df:
@@ -103,6 +89,7 @@ def transform_dataset(df):
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
+    protected_attributes_all_indices_dict = {}
     for protected_attribute in protected_attributes_all:
         protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
 
@@ -110,7 +97,7 @@ def transform_dataset(df):
     # print("Shape of S: {}".format(S.shape))
     # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
 
-    return df_binary_encoded, Y, S, Y_true
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
 def transform_dataset_census(df):
     """

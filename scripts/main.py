@@ -5,11 +5,7 @@ from attack_model import \
     transform_dataset, \
     transform_dataset_census, \
     transform_dataset_credit, \
-    attack_keras_model, \
-    protected_attributes_for_optimization, \
-    protected_attributes_for_comparison, \
-    protected_attributes_all, \
-    protected_attributes_all_indices_dict
+    attack_keras_model
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -36,6 +32,10 @@ from Differential_Fairness.differential_fairness import computeSmoothedEDF
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
+protected_attributes_for_optimization = []
+protected_attributes_for_comparison = []
+protected_attributes_all = []
+protected_attributes_all_indices_dict = {}
 
 class GradientReversalFunction(Function):
     """
@@ -321,6 +321,13 @@ def train_and_evaluate(train_loader: DataLoader,
 
     return model, df
 
+# flatten(...) from https://stackoverflow.com/a/17867797
+def flatten(A):
+    rt = []
+    for i in A:
+        if isinstance(i,list): rt.extend(flatten(i))
+        else: rt.append(i)
+    return rt
 
 def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -331,10 +338,21 @@ def main(args):
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', None)
 
+    global protected_attributes_for_optimization
+    global protected_attributes_for_comparison
+    global protected_attributes_all
+    global protected_attributes_all_indices_dict
+    protected_attributes_for_optimization = [args.optimize_attribute]
+    protected_attributes_for_comparison = []
+    for a in args.measure_attribute:
+        protected_attributes_for_comparison.append(a.split(','))
+    protected_attributes_all = list(set(flatten(protected_attributes_for_optimization) + flatten(protected_attributes_for_comparison)))
+
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true = transform_dataset(df)
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        protected_attributes_all_indices_dict = ind_dict.copy()
         print("#")
         print("#")
         print("#")
@@ -524,5 +542,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset-attack', help="Reuse the same model if False.", default=False, type=bool)
     parser.add_argument('--dataset', help="The data set to use; values: compas or adult", default="compas", type=str)
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
+    parser.add_argument('--optimize-attribute', help='Attribute(s) to optimize fairness against', required=True, type=str)
+    parser.add_argument('--measure-attribute', action='append', help='Attribute(s) to measure fairness against', type=str)
     args = parser.parse_args()
     main(args)
