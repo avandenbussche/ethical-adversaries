@@ -19,7 +19,7 @@ def transform_dataset(df, protected):
     """
     considered_attributes = protected_attributes
     if protected is not None:
-        considered_attributes = protected_attributes + protected
+        considered_attributes.append(protected)
 
 
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
