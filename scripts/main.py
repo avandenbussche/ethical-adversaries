@@ -308,8 +308,7 @@ def main(args):
         if args.protected is not None:
             protected = args.protected
         df_binary, Y, S, Y_true = transform_dataset(df,protected)
-        if(args.additiions == "sex"):
-            print("Sex gender is also selected as protected attribute")
+
         print("#")
         print("#")
         print("#")
