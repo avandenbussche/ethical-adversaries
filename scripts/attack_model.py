@@ -17,10 +17,13 @@ def transform_dataset(df, protected):
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
-    protected_attributes.append(str(protected))
+    #protected_attributes.append(str(protected))
 
-    #considered_attributes = protected_attributes
+    new_list=[]
+    for item in protected_attributes:
+        new_list.append(item)
 
+    new_list.append(protected)
     df_binary = df[(df["race"] == "Caucasian") | (df["race"] == "African-American")]
 
     del df_binary['c_jail_in']
@@ -34,7 +37,7 @@ def transform_dataset(df, protected):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary[protected_attributes]
+    S = df_binary[new_list]
     #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
