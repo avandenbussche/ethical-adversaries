@@ -109,9 +109,15 @@ def get_metrics(results, args, threshold, fraction):
         - bm(results).P(pred=lambda x: x > threshold).given(
             race=1))
 
-    eq_op = abs(
-        bm(results).P(pred=lambda x: x > threshold).given(race=0, compas=True)
-        - bm(results).P(pred=lambda x: x > threshold).given(race=1, compas=True))
+    #adjust values if not compas
+    if args.dataset == 'compas':
+        eq_op = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(race=0, compas=True)
+            - bm(results).P(pred=lambda x: x > threshold).given(race=1, compas=True))
+    elif args.dataset == 'german':
+        eq_op = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(race=0, german=True)
+            - bm(results).P(pred=lambda x: x > threshold).given(race=1, german=True))
 
     dem_parity_ratio = abs(
         bm(results).P(pred=lambda x: x > threshold).given(race=0)
@@ -124,6 +130,42 @@ def get_metrics(results, args, threshold, fraction):
                          predict_vector=(results['pred'] > threshold).values)
     if args.dataset == 'compas':
         cm_high_risk = ConfusionMatrix(actual_vector=(results['compas'] > 8).values,
+                             predict_vector=(results['pred'] > 8).values)
+
+        result = {"DP": dem_parity,
+                  "EO": eq_op,
+                  "DP ratio": dem_parity_ratio,
+                  "acc": cm.Overall_ACC,
+                  "acc_ci_min": cm.CI95[0],
+                  "acc_ci_max": cm.CI95[1],
+                  "f1": cm.F1_Macro,
+                  "acc_high_risk": cm_high_risk.Overall_ACC,
+                  "acc_ci_min_high_risk": cm_high_risk.CI95[0],
+                  "acc_ci_max_high_risk": cm_high_risk.CI95[1],
+                  "f1_high_risk": cm_high_risk.F1_Macro,
+                  "adversarial_fraction": fraction,
+                  "DF (O: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
+                  "DFR (O: {})".format(protected_attributes_for_optimization): exp(-diff_fair_optimized),
+                  }
+
+        for s in protected_attributes_for_comparison:
+            diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
+            key = "DF (C: {})".format(s)
+            key_pp = "DFR (C: {})".format(s)
+            result[key] = diff_fair_s
+            result[key_pp] = exp(-diff_fair_s)
+
+        for s1 in range(2):
+            for r1 in range(2):
+                for s2 in range(2):
+                    for r2 in range(2):
+                        if s1 == s2 and r1 == r2:
+                            continue
+                        key = "DPR (S{}R{}/S{}R{})".format(s1, r1, s2, r2)
+                        result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(race=r1, sex=s1)
+                                         / bm(results).P(pred=lambda x: x > threshold).given(race=r2, sex=s2) )
+    elif args.dataset == 'german':
+        cm_high_risk = ConfusionMatrix(actual_vector=(results['german'] > 8).values,
                              predict_vector=(results['pred'] > 8).values)
 
         result = {"DP": dem_parity,
@@ -287,21 +329,38 @@ def train_and_evaluate(train_loader: DataLoader,
 
         # print({"Test loss": np.mean(test_losses)})
 
-    results = test_results[0]['y_hat']
-    outcome = test_results[0]['y_true']
-    compas = test_results[0]['y_compas']
-    protected_results = test_results[0]['s']
-    x = test_results[0]['x']
-    if grl_lambda is not None and grl_lambda != 0:
-        protected = test_results[0]['s_hat']
-    for r in test_results[1:]:
-        results = torch.cat((results, r['y_hat']))
-        outcome = torch.cat((outcome, r['y_true']))
-        compas = torch.cat((compas, r['y_compas']))
-        protected_results = torch.cat((protected_results, r['s']))
-        x = torch.cat((x, r['x']))
+    if args.dataset == 'compas':
+        results = test_results[0]['y_hat']
+        outcome = test_results[0]['y_true']
+        compas = test_results[0]['y_compas']
+        protected_results = test_results[0]['s']
+        x = test_results[0]['x']
         if grl_lambda is not None and grl_lambda != 0:
-            protected = torch.cat((protected, r['s_hat']))
+            protected = test_results[0]['s_hat']
+        for r in test_results[1:]:
+            results = torch.cat((results, r['y_hat']))
+            outcome = torch.cat((outcome, r['y_true']))
+            compas = torch.cat((compas, r['y_compas']))
+            protected_results = torch.cat((protected_results, r['s']))
+            x = torch.cat((x, r['x']))
+            if grl_lambda is not None and grl_lambda != 0:
+                protected = torch.cat((protected, r['s_hat']))
+    elif args.dataset == 'german':
+            results = test_results[0]['y_hat']
+            outcome = test_results[0]['y_true']
+            german = test_results[0]['y_german']
+            protected_results = test_results[0]['s']
+            x = test_results[0]['x']
+            if grl_lambda is not None and grl_lambda != 0:
+                protected = test_results[0]['s_hat']
+            for r in test_results[1:]:
+                results = torch.cat((results, r['y_hat']))
+                outcome = torch.cat((outcome, r['y_true']))
+                german = torch.cat((compas, r['y_german']))
+                protected_results = torch.cat((protected_results, r['s']))
+                x = torch.cat((x, r['x']))
+                if grl_lambda is not None and grl_lambda != 0:
+                    protected = torch.cat((protected, r['s_hat']))
 
     # print("Shape of x: {}".format(x.shape))
     # print("Shape of protected_results: {}".format(protected_results.shape))
@@ -310,7 +369,10 @@ def train_and_evaluate(train_loader: DataLoader,
     df = pd.DataFrame(data=results.cpu().numpy(), columns=['pred'])
 
     df['true'] = outcome.cpu().numpy()
-    df['compas'] = compas.cpu().numpy()
+    if args.dataset == 'compas':
+        df['compas'] = compas.cpu().numpy()
+    elif args.dataset == 'german':
+        df['german'] = german.cpu().numpy()
     for index, protected_attribute in enumerate(protected_attributes_for_optimization):
         df[protected_attribute] = protected_results.cpu().numpy()[:, index]
     for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
@@ -397,8 +459,26 @@ def main(args):
     elif args.dataset == "german":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
-        df_binary, Y, S, _ = transform_dataset_credit(df)
-        l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        protected_attributes_all_indices_dict = ind_dict.copy()
+        print("#")
+        print("#")
+        print("#")
+        print("ALL PROTECTED ATTRIBUTES")
+        print("#")
+        print("#")
+        print("#")
+        print(S)
+        print("#")
+        print("#")
+        print("#")
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
+        print(" ")
+        print(" ")
+        print(" ")
+        Y = Y.to_numpy()
+        l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     else:
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
