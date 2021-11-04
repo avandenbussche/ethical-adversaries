@@ -99,7 +99,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
-def transform_dataset_census(df):
+def transform_dataset_census(df,protected_attributes_for_optimization, protected_attributes_all):
     """
 
     :param df: the dataset "census income" from a csv file with reduced features, heterogeneous types and missing values, no header
@@ -152,7 +152,7 @@ def transform_dataset_census(df):
     mi = np.amin(encoded_feature)
     ma = np.amax(encoded_feature)
     encoded_feature = (encoded_feature - mi) / (ma - mi)
-    
+
     #df_binary_encoded is the data frame containing encoded features
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -169,7 +169,7 @@ def transform_dataset_census(df):
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
-    
+
     #feature 10 and 11 are categorical
     for i in range(10,12):
         encod_feature = df_replace.iloc[:,i]

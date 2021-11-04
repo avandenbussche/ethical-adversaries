@@ -5,7 +5,8 @@ from attack_model import \
     transform_dataset, \
     transform_dataset_census, \
     transform_dataset_credit, \
-    attack_keras_model
+    attack_keras_model, \
+    protected_attributes
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, TensorDataset, DataLoader
@@ -21,13 +22,14 @@ import os
 import argparse
 import logging
 from torch.autograd import Function
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from bayesian_model import BayesianModel as bm
 from pycm import ConfusionMatrix
 
 from secml.array.c_array import CArray
 
-from math import exp
 from Differential_Fairness.differential_fairness import computeSmoothedEDF
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
@@ -436,7 +438,9 @@ def main(args):
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
-        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+
+        #transform dataset_census
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset_census(df, protected_attributes_for_optimization, protected_attributes_all)
         protected_attributes_all_indices_dict = ind_dict.copy()
         print("#")
         print("#")
