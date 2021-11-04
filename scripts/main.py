@@ -374,8 +374,26 @@ def main(args):
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
-        df_binary, Y, S, _ = transform_dataset_census(df)
-        l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        protected_attributes_all_indices_dict = ind_dict.copy()
+        print("#")
+        print("#")
+        print("#")
+        print("ALL PROTECTED ATTRIBUTES")
+        print("#")
+        print("#")
+        print("#")
+        print(S)
+        print("#")
+        print("#")
+        print("#")
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
+        print(" ")
+        print(" ")
+        print(" ")
+        Y = Y.to_numpy()
+        l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     elif args.dataset == "german":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
@@ -484,7 +502,7 @@ def main(args):
         y_train_tensor = torch.cat(
             (y_train_tensor, torch.tensor(result_class.reshape(-1, 1).astype(np.float32)).clamp(0, 10)))
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
-        
+
         # Generate array of random s values, one column per number of protected attributes
         s = np.random.randint(2, size=(len(result_class), len(protected_attributes_for_optimization)))
         s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*len(protected_attributes_for_optimization)).astype(np.float64))))
@@ -544,5 +562,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
     parser.add_argument('--optimize-attribute', help='Attribute(s) to optimize fairness against', required=True, type=str)
     parser.add_argument('--measure-attribute', action='append', help='Attribute(s) to measure fairness against', type=str)
+     #add argument for compas multiplle categories
+    #parser.add_argument('--protected',default= None, type = str)
     args = parser.parse_args()
     main(args)
