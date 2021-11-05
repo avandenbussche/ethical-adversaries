@@ -39,11 +39,14 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     data_to_encode = df_binary.to_numpy()
     feat_to_encode = data_to_encode[:, 0] == "Male"
-    # print(feat_to_encode)
+    #print(feat_to_encode)
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
-    # print(feat_to_encode)
+    #print(feat_to_encode)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    #print(encoded_feature)
+    # first one-hot column is female true
+    # second one-hot column is male true
 
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -57,6 +60,8 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     feat_to_encode = data_to_encode[:, 2] == "Caucasian"
     feat_to_encode = feat_to_encode.reshape(-1, 1)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    # first one-hot column is african-american true
+    # second one-hot column is caucasian true
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
