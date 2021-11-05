@@ -37,7 +37,6 @@ protected_attributes_for_comparison = []
 protected_attributes_all = []
 protected_attributes_all_indices_dict = {}
 protected_attributes_cols_num = 0
-protected_attributes_cols_offsets = []
 
 class GradientReversalFunction(Function):
     """
@@ -81,7 +80,7 @@ class Net(nn.Module):
         self.fc4 = nn.Linear(32, 1)
         if self._grl_lambda != 0:
             self.grl = GradientReversal(grl_lambda)
-            self.fc5 = nn.Linear(32, 2)
+            self.fc5 = nn.Linear(32, protected_attributes_cols_num)
         # self.grl = GradientReversal(100)
 
     def forward(self, x):
@@ -224,7 +223,9 @@ def train_and_evaluate(train_loader: DataLoader,
             # forward + backward + optimize
             if grl_lambda is not None and grl_lambda != 0:
                 outputs, outputs_protected = model(x_batch)
-                loss = criterion(outputs, y_batch) + criterion_bias(outputs_protected, s_batch.argmax(dim=1))
+                loss = criterion(outputs, y_batch)
+                for i in range(len(protected_attributes_for_optimization)):
+                    loss += criterion_bias(outputs_protected[:, (2*i):(2*i+2)], s_batch[:, (2*i):(2*i+2)].argmax(dim=1))
             else:
                 outputs = model(x_batch)
                 loss = criterion(outputs, y_batch)
@@ -245,7 +246,10 @@ def train_and_evaluate(train_loader: DataLoader,
                 model.eval()
                 if grl_lambda is not None and grl_lambda != 0:
                     yhat, s_hat = model(x_val)
-                    val_loss = (criterion(y_val, yhat) + criterion_bias(s_val, s_hat.argmax(dim=1))).item()
+                    val_loss = criterion(y_val, yhat)
+                    for i in range(len(protected_attributes_for_optimization)):
+                        val_loss += criterion_bias(s_val[:, (2*i):(2*i+2)], s_hat[:, (2*i):(2*i+2)].argmax(dim=1))
+                    val_loss = val_loss.item()
                 else:
                     yhat = model(x_val)
                     val_loss = criterion(y_val, yhat).item()
@@ -261,7 +265,6 @@ def train_and_evaluate(train_loader: DataLoader,
     if args.show_graphs:
         plt.plot(range(len(training_losses)), training_losses, label="Training Loss")
         plt.plot(range(len(validation_losses)), validation_losses, label="Validation Loss")
-        # plt.scatter(x_tensor, y_out.detach().numpy())
         plt.title('Loss vs Epoch')
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
@@ -274,10 +277,13 @@ def train_and_evaluate(train_loader: DataLoader,
             x_test = x_test.to(device)
             y_test = y_test.to(device)
             s_true = s_true.to(device)
+
             model.eval()
             if grl_lambda is not None and grl_lambda != 0:
                 yhat, s_hat = model(x_test)
-                test_loss = (criterion(y_test, yhat) + criterion_bias(s_true, s_hat.argmax(dim=1))).item()
+                test_loss = criterion(y_test, yhat)
+                for i in range(len(protected_attributes_for_optimization)):
+                    test_loss += criterion_bias(s_true[:, (2*i):(2*i+2)], s_hat[:, (2*i):(2*i+2)].argmax(dim=1))
                 test_losses.append(val_loss)
                 test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "s_hat": s_hat, "x": x_test})
             else:
@@ -344,7 +350,6 @@ def main(args):
     global protected_attributes_all
     global protected_attributes_all_indices_dict
     global protected_attributes_cols_num
-    global protected_attributes_cols_offsets
     protected_attributes_for_optimization = args.optimize_attribute.split(',')
     protected_attributes_for_comparison = []
     for a in args.measure_attribute:
@@ -354,10 +359,9 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true, ind_dict, S_cols_num, S_cols_offsets = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        df_binary, Y, S, Y_true, ind_dict, S_cols_num = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
         protected_attributes_all_indices_dict = ind_dict.copy()
         protected_attributes_cols_num = S_cols_num
-        protected_attributes_cols_offsets = S_cols_offsets
         print("The protected attributes require {} columns.".format(protected_attributes_cols_num))
         print("ALL PROTECTED ATTRIBUTES")
         print(S)
