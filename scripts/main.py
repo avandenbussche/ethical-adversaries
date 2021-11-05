@@ -181,7 +181,6 @@ def train_and_evaluate(train_loader: DataLoader,
                        grl_lambda=None,
                        model=None):
     """
-
     :param train_loader: Pytorch-like DataLoader with training data.
     :param val_loader: Pytorch-like DataLoader with validation data.
     :param test_loader: Pytorch-like DataLoader with testing data.
@@ -342,7 +341,7 @@ def main(args):
     global protected_attributes_for_comparison
     global protected_attributes_all
     global protected_attributes_all_indices_dict
-    protected_attributes_for_optimization = [args.optimize_attribute]
+    protected_attributes_for_optimization = args.optimize_attribute.split(',')
     protected_attributes_for_comparison = []
     for a in args.measure_attribute:
         protected_attributes_for_comparison.append(a.split(','))
