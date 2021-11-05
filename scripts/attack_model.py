@@ -114,6 +114,7 @@ def transform_dataset_census(df,protected_attributes_for_optimization, protected
 
     ##Y_true is the vector containing labels, at this point, labels (initially strings) have been transformed into integer (0 and 1) -> -5000 is now '0' and 5000+ is now '+1'
     Y = label_encoder.fit_transform(df_label)
+    print("Y is",Y,"df_label is", df_label)
     #remove last column from df
     del df[df.columns[-1]]
 

@@ -431,8 +431,12 @@ def main(args):
         print(" ")
         print(" ")
         print(" ")
+        print("Y is", Y)
         Y = Y.to_numpy()
+        print("Y is now", Y)
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
+        print("l_sensor is now", l_tensor)
+
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
@@ -458,8 +462,17 @@ def main(args):
         print(" ")
         print(" ")
         print(" ")
-        Y = Y.to_numpy()
-        l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
+        print("Y is", Y)
+        #already  label encoding whether person makes more or less than 50 k
+        #Y = Y.to_numpy()
+        print("Y_true is", Y_true)
+        #l_tensor = torch.tensor(Y_true.astype(np.float32))
+
+        float_lst = []
+        float_lst = [float(item) for item in Y_true]
+        l_tensor = float_lst
+        print("l_sensor is now", l_tensor)
+
     elif args.dataset == "german":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
@@ -500,11 +513,15 @@ def main(args):
     print(" ")
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
+    print("X_tensor",x_tensor)
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+    print("y_tensor",y_tensor)
     s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, len(protected_attributes_for_optimization))).toarray())
-
-    dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
-
+    print("s_tensor",s_tensor)
+    if args.dataset == 'compas':
+        dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
+    elif args.dataset == 'adult':
+        dataset = TensorDataset(x_tensor, y_tensor, s_tensor)
     base_size = len(dataset) // 10
     split = [7 * base_size, 1 * base_size, len(dataset) - 8 * base_size]  # Train, validation, test
 
@@ -514,10 +531,15 @@ def main(args):
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size)
     test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size)
 
-    x_train_tensor = train_dataset[:][0]
-    y_train_tensor = train_dataset[:][1]
-    l_train_tensor = train_dataset[:][2]
-    s_train_tensor = train_dataset[:][3]
+    if args.dataset == 'compas':
+        x_train_tensor = train_dataset[:][0]
+        y_train_tensor = train_dataset[:][1]
+        l_train_tensor = train_dataset[:][2]
+        s_train_tensor = train_dataset[:][3]
+    elif args.dataset == 'adult':
+        x_train_tensor = train_dataset[:][0]
+        y_train_tensor = train_dataset[:][1]
+        s_train_tensor = train_dataset[:][2]
 
     global_results = []
 
