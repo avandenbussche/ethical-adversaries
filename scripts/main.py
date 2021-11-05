@@ -319,7 +319,7 @@ def train_and_evaluate(train_loader: DataLoader,
     df['true'] = outcome.cpu().numpy()
     df['compas'] = compas.cpu().numpy()
     for index, protected_attribute in enumerate(protected_attributes_for_optimization):
-        df[protected_attribute] = protected_results.cpu().numpy()[:, protected_attributes_cols_offsets[index]]
+        df[protected_attribute] = protected_results.cpu().numpy()[:, 2*index]
     for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
         df[unprotected_attribute] = x.cpu().numpy()[:, protected_attributes_all_indices_dict[unprotected_attribute]]
     if grl_lambda is not None and grl_lambda != 0:
