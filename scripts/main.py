@@ -36,7 +36,8 @@ protected_attributes_for_optimization = []
 protected_attributes_for_comparison = []
 protected_attributes_all = []
 protected_attributes_all_indices_dict = {}
-protected_attributes_num_cols = 0
+protected_attributes_cols_num = 0
+protected_attributes_cols_offsets = []
 
 class GradientReversalFunction(Function):
     """
@@ -312,7 +313,7 @@ def train_and_evaluate(train_loader: DataLoader,
     df['true'] = outcome.cpu().numpy()
     df['compas'] = compas.cpu().numpy()
     for index, protected_attribute in enumerate(protected_attributes_for_optimization):
-        df[protected_attribute] = protected_results.cpu().numpy()[:, index]
+        df[protected_attribute] = protected_results.cpu().numpy()[:, protected_attributes_cols_offsets[index]]
     for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
         df[unprotected_attribute] = x.cpu().numpy()[:, protected_attributes_all_indices_dict[unprotected_attribute]]
     if grl_lambda is not None and grl_lambda != 0:
@@ -342,7 +343,8 @@ def main(args):
     global protected_attributes_for_comparison
     global protected_attributes_all
     global protected_attributes_all_indices_dict
-    global protected_attributes_num_cols
+    global protected_attributes_cols_num
+    global protected_attributes_cols_offsets
     protected_attributes_for_optimization = args.optimize_attribute.split(',')
     protected_attributes_for_comparison = []
     for a in args.measure_attribute:
@@ -352,10 +354,11 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true, ind_dict, num_S_cols = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        df_binary, Y, S, Y_true, ind_dict, S_cols_num, S_cols_offsets = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
         protected_attributes_all_indices_dict = ind_dict.copy()
-        protected_attributes_num_cols = num_S_cols
-        print("The protected attributes require {} columns.".format(protected_attributes_num_cols))
+        protected_attributes_cols_num = S_cols_num
+        protected_attributes_cols_offsets = S_cols_offsets
+        print("The protected attributes require {} columns.".format(protected_attributes_cols_num))
         print("ALL PROTECTED ATTRIBUTES")
         print(S)
         print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
@@ -455,7 +458,7 @@ def main(args):
         
         # Generate array of random s values, one column per number of protected attributes
         s = np.random.randint(2, size=(len(result_class), len(protected_attributes_for_optimization)))
-        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), protected_attributes_num_cols).astype(np.float64))))
+        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), protected_attributes_cols_num).astype(np.float64))))
 
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor, l_train_tensor, s_train_tensor)
         train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
