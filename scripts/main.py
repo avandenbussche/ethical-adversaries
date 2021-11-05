@@ -345,22 +345,8 @@ def train_and_evaluate(train_loader: DataLoader,
             x = torch.cat((x, r['x']))
             if grl_lambda is not None and grl_lambda != 0:
                 protected = torch.cat((protected, r['s_hat']))
-    elif args.dataset == 'german':
-            results = test_results[0]['y_hat']
-            outcome = test_results[0]['y_true']
-            german = test_results[0]['y_german']
-            protected_results = test_results[0]['s']
-            x = test_results[0]['x']
-            if grl_lambda is not None and grl_lambda != 0:
-                protected = test_results[0]['s_hat']
-            for r in test_results[1:]:
-                results = torch.cat((results, r['y_hat']))
-                outcome = torch.cat((outcome, r['y_true']))
-                german = torch.cat((compas, r['y_german']))
-                protected_results = torch.cat((protected_results, r['s']))
-                x = torch.cat((x, r['x']))
-                if grl_lambda is not None and grl_lambda != 0:
-                    protected = torch.cat((protected, r['s_hat']))
+    elif args.dataset == 'adullt':
+        contine
 
     # print("Shape of x: {}".format(x.shape))
     # print("Shape of protected_results: {}".format(protected_results.shape))
@@ -371,8 +357,6 @@ def train_and_evaluate(train_loader: DataLoader,
     df['true'] = outcome.cpu().numpy()
     if args.dataset == 'compas':
         df['compas'] = compas.cpu().numpy()
-    elif args.dataset == 'german':
-        df['german'] = german.cpu().numpy()
     for index, protected_attribute in enumerate(protected_attributes_for_optimization):
         df[protected_attribute] = protected_results.cpu().numpy()[:, index]
     for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
