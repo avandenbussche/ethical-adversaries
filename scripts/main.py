@@ -356,21 +356,10 @@ def main(args):
         protected_attributes_all_indices_dict = ind_dict.copy()
         protected_attributes_num_cols = num_S_cols
         print("The protected attributes require {} columns.".format(protected_attributes_num_cols))
-        print("#")
-        print("#")
-        print("#")
         print("ALL PROTECTED ATTRIBUTES")
-        print("#")
-        print("#")
-        print("#")
         print(S)
-        print("#")
-        print("#")
-        print("#")
         print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
         print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
-        print(" ")
-        print(" ")
         print(" ")
         Y = Y.to_numpy()
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
@@ -388,16 +377,8 @@ def main(args):
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
 
-    print("#")
-    print("#")
-    print("#")
     print("MEAN")
-    print("#")
-    print("#")
-    print("#")
     print(np.mean(Y))
-    print(" ")
-    print(" ")
     print(" ")
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
@@ -428,16 +409,8 @@ def main(args):
     _, results = train_and_evaluate(train_loader, val_loader, test_loader, device, args, input_shape=x_tensor.shape[1],
                                     grl_lambda=0)
 
-    print("#")
-    print("#")
-    print("#")
     print("RESULTS")
-    print("#")
-    print("#")
-    print("#")
     print(results)
-    print(" ")
-    print(" ")
     print(" ")
 
     result = get_metrics(results, args, threshold, 0)
@@ -445,16 +418,8 @@ def main(args):
 
     df = pd.DataFrame(global_results)
 
-    print("#")
-    print("#")
-    print("#")
     print("DF -1")
-    print("#")
-    print("#")
-    print("#")
     print(df)
-    print(" ")
-    print(" ")
     print(" ")
 
     t_main = trange(args.iterations, desc="Attack", leave=False, position=0)
@@ -498,16 +463,8 @@ def main(args):
 
         df = pd.DataFrame(global_results)
 
-        print("#")
-        print("#")
-        print("#")
         print("DF {}".format(i))
-        print("#")
-        print("#")
-        print("#")
         print(df)
-        print(" ")
-        print(" ")
         print(" ")
 
     # Finally save experimental data if a save dir is specified
