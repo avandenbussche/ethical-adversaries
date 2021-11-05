@@ -359,9 +359,9 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true, ind_dict, S_cols_num = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
         protected_attributes_all_indices_dict = ind_dict.copy()
-        protected_attributes_cols_num = S_cols_num
+        protected_attributes_cols_num = 2*len(protected_attributes_for_optimization)
         print("The protected attributes require {} columns.".format(protected_attributes_cols_num))
         print("ALL PROTECTED ATTRIBUTES")
         print(S)
