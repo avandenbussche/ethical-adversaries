@@ -36,6 +36,7 @@ protected_attributes_for_optimization = []
 protected_attributes_for_comparison = []
 protected_attributes_all = []
 protected_attributes_all_indices_dict = {}
+protected_attributes_num_cols = 0
 
 class GradientReversalFunction(Function):
     """
@@ -341,6 +342,7 @@ def main(args):
     global protected_attributes_for_comparison
     global protected_attributes_all
     global protected_attributes_all_indices_dict
+    global protected_attributes_num_cols
     protected_attributes_for_optimization = args.optimize_attribute.split(',')
     protected_attributes_for_comparison = []
     for a in args.measure_attribute:
@@ -350,8 +352,10 @@ def main(args):
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        df_binary, Y, S, Y_true, ind_dict, num_S_cols = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
         protected_attributes_all_indices_dict = ind_dict.copy()
+        protected_attributes_num_cols = num_S_cols
+        print("The protected attributes require {} columns.".format(protected_attributes_num_cols))
         print("#")
         print("#")
         print("#")
@@ -486,7 +490,7 @@ def main(args):
         
         # Generate array of random s values, one column per number of protected attributes
         s = np.random.randint(2, size=(len(result_class), len(protected_attributes_for_optimization)))
-        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), 2*len(protected_attributes_for_optimization)).astype(np.float64))))
+        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), protected_attributes_num_cols).astype(np.float64))))
 
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor, l_train_tensor, s_train_tensor)
         train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)

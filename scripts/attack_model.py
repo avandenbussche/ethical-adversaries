@@ -89,6 +89,9 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
+    num_S_cols = 0
+    for protected_attribute in protected_attributes_for_optimization:
+        num_S_cols += len(df_binary[protected_attribute].unique())
     protected_attributes_all_indices_dict = {}
     for protected_attribute in protected_attributes_all:
         protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
@@ -97,7 +100,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     # print("Shape of S: {}".format(S.shape))
     # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
 
-    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict, num_S_cols
 
 def transform_dataset_census(df):
     """
