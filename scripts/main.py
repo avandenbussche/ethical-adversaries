@@ -254,7 +254,7 @@ def train_and_evaluate(train_loader: DataLoader,
         model.train()
 
         batch_losses = []
-        for x_batch, y_batch, _, s_batch in train_loader:
+        for x_batch, y_batch, s_batch in train_loader:
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
             s_batch = s_batch.to(device)
@@ -279,7 +279,7 @@ def train_and_evaluate(train_loader: DataLoader,
 
         with torch.no_grad():
             val_losses = []
-            for x_val, y_val, _, s_val in val_loader:
+            for x_val, y_val, s_val in val_loader:
                 x_val = x_val.to(device)
                 y_val = y_val.to(device)
                 s_val = s_val.to(device)
@@ -530,6 +530,10 @@ def main(args):
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size)
     test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size)
+
+    print("train_loader", train_loader)
+    print("val_loader", val_loader)
+    print("val_loader", test_loader)
 
     if args.dataset == 'compas':
         x_train_tensor = train_dataset[:][0]
