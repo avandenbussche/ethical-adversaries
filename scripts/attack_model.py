@@ -189,17 +189,22 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     del df[df.columns[-1]]
 
     # Y_true is the true outcome, in this case we're not using a future predictor (vs. compas)
-    Y_true=[]
+    Y_true=np.array([])
 
     #S is the protected attribute
     #note age is the protected attribute here
     #binary if one is young or old
 
     #print("DF age cuttin",df.iloc[:,12])
-    S=df.iloc[:,12] > 25
+    S = pd.DataFrame()
 
-    if protected_attributes_for_optimization == "Age":
-        S=df.iloc[:,12] > 25
+    if "age" in protected_attributes_for_optimization:
+        S_age = df.iloc[:,12] > 25
+        S = pd.concat([S, pd.DataFrame(S_age)], axis=1)
+    if "sex" in protected_attributes_for_optimization:
+        S_sex = df.iloc[:,8] == "A92" | df.iloc[:,8] == "A95"
+        S = pd.concat([S, pd.DataFrame(S_sex)], axis=1)
+
     #del df["Age"]
 
     #remove examples with missing values
@@ -221,7 +226,7 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     #print("The df is", df)
 
     # categorical attributes
-    for i in [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18,19]:
+    for i in [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18, 19]:
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
@@ -236,13 +241,13 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
 
     #print("S is",S)
     protected_attributes_all_indices_dict = {}
-    for protected_attribute in protected_attributes_all:
-        #print("protected_attribute is", protected_attribute)
-        if protected_attribute == "Sex":
-            index = 8
-            protected_attributes_all_indices_dict[protected_attribute] = df.iloc[:,index]
+    if "age" in protected_attributes_all:
+        protected_attributes_all_indices_dict["age"] = 12
+    if "sex" in protected_attributes_all:
+        protected_attributes_all_indices_dict["sex"] = 8
+
     #print("This part is done")
-    return df_binary_encoded, Y, S, Y_true,protected_attributes_all_indices_dict
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
 
 def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):

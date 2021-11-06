@@ -104,26 +104,27 @@ class Net(nn.Module):
 def get_metrics(results, args, threshold, fraction):
     "Create the metrics from an output df."
 
-    # Calculate biases after training
-    dem_parity = abs(
-        bm(results).P(pred=lambda x: x > threshold).given(race=0)
-        - bm(results).P(pred=lambda x: x > threshold).given(
-            race=1))
-
-    eq_op = abs(
-        bm(results).P(pred=lambda x: x > threshold).given(race=0, compas=True)
-        - bm(results).P(pred=lambda x: x > threshold).given(race=1, compas=True))
-
-    dem_parity_ratio = abs(
-        bm(results).P(pred=lambda x: x > threshold).given(race=0)
-        / bm(results).P(pred=lambda x: x > threshold).given(
-            race=1))
-
-    diff_fair_optimized = computeSmoothedEDF(results[protected_attributes_for_optimization].astype(int).values, (results['pred'] > threshold).astype(int).values)
-
-    cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
-                         predict_vector=(results['pred'] > threshold).values)
     if args.dataset == 'compas':
+        # Calculate biases after training
+        dem_parity = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(race=0)
+            - bm(results).P(pred=lambda x: x > threshold).given(
+                race=1))
+
+        eq_op = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(race=0, compas=True)
+            - bm(results).P(pred=lambda x: x > threshold).given(race=1, compas=True))
+
+        dem_parity_ratio = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(race=0)
+            / bm(results).P(pred=lambda x: x > threshold).given(
+                race=1))
+
+        diff_fair_optimized = computeSmoothedEDF(results[protected_attributes_for_optimization].astype(int).values, (results['pred'] > threshold).astype(int).values)
+
+        cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
+                             predict_vector=(results['pred'] > threshold).values)
+
         cm_high_risk = ConfusionMatrix(actual_vector=(results['compas'] > 8).values,
                              predict_vector=(results['pred'] > 8).values)
 
@@ -159,6 +160,56 @@ def get_metrics(results, args, threshold, fraction):
                         key = "DPR (S{}R{}/S{}R{})".format(s1, r1, s2, r2)
                         result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(race=r1, sex=s1)
                                          / bm(results).P(pred=lambda x: x > threshold).given(race=r2, sex=s2) )
+
+    elif args.dataset=="german":
+
+        # Calculate biases after training
+        dem_parity = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(age=0)
+            - bm(results).P(pred=lambda x: x > threshold).given(
+                age=1))
+
+        eq_op = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(age=0, compas=True)
+            - bm(results).P(pred=lambda x: x > threshold).given(age=1, compas=True))
+
+        dem_parity_ratio = abs(
+            bm(results).P(pred=lambda x: x > threshold).given(age=0)
+            / bm(results).P(pred=lambda x: x > threshold).given(age=1))
+
+        diff_fair_optimized = computeSmoothedEDF(results[protected_attributes_for_optimization].astype(int).values, (results['pred'] > threshold).astype(int).values)
+
+        cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
+                             predict_vector=(results['pred'] > threshold).values)
+
+        result = {"DP": dem_parity,
+                  "EO": eq_op,
+                  "DP ratio": dem_parity_ratio,
+                  "acc": cm.Overall_ACC,
+                  "acc_ci_min": cm.CI95[0],
+                  "acc_ci_max": cm.CI95[1],
+                  "f1": cm.F1_Macro,
+                  "adversarial_fraction": fraction,
+                  "DF (O: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
+                  "DFR (O: {})".format(protected_attributes_for_optimization): exp(-diff_fair_optimized),
+                  }
+
+        for s in protected_attributes_for_comparison:
+            diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
+            key = "DF (C: {})".format(s)
+            key_pp = "DFR (C: {})".format(s)
+            result[key] = diff_fair_s
+            result[key_pp] = exp(-diff_fair_s)
+
+        for s1 in range(2):
+            for r1 in range(2):
+                for s2 in range(2):
+                    for r2 in range(2):
+                        if s1 == s2 and r1 == r2:
+                            continue
+                        key = "DPR (S{}A{}/S{}A{})".format(s1, r1, s2, r2)
+                        result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(age=r1, sex=s1)
+                                         / bm(results).P(pred=lambda x: x > threshold).given(age=r2, sex=s2) )
 
     else:
         result = {"DP": dem_parity,
@@ -394,10 +445,9 @@ def main(args):
         print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
         print(" ")
         #print("Y is", Y)
-        Y=Y.to_numpy()
-        
-        #l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
-        l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
+        #Y=Y.to_numpy()
+
+        l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
     else:
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
