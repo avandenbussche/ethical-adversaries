@@ -166,8 +166,7 @@ def get_metrics(results, args, threshold, fraction):
         # Calculate biases after training
         dem_parity = abs(
             bm(results).P(pred=lambda x: x > threshold).given(age=0)
-            - bm(results).P(pred=lambda x: x > threshold).given(
-                age=1))
+            - bm(results).P(pred=lambda x: x > threshold).given(age=1))
 
         eq_op = abs(
             bm(results).P(pred=lambda x: x > threshold).given(age=0, compas=True)
@@ -207,7 +206,7 @@ def get_metrics(results, args, threshold, fraction):
                     for r2 in range(2):
                         if s1 == s2 and r1 == r2:
                             continue
-                        key = "DPR (S{}A{}/S{}A{})".format(s1, r1, s2, r2)
+                        key = "DPR (S{}F{}/S{}F{})".format(s1, r1, s2, r2)
                         result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(age=r1, sex=s1)
                                          / bm(results).P(pred=lambda x: x > threshold).given(age=r2, sex=s2) )
 
@@ -361,8 +360,8 @@ def train_and_evaluate(train_loader: DataLoader,
         if grl_lambda is not None and grl_lambda != 0:
             protected = torch.cat((protected, r['s_hat']))
 
-    # print("Shape of x: {}".format(x.shape))
-    # print("Shape of protected_results: {}".format(protected_results.shape))
+    print("Shape of x: {}".format(x.shape))
+    print("Shape of protected_results: {}".format(protected_results.shape))
     # print("First row of x: {}".format(x[0]))
 
     df = pd.DataFrame(data=results.cpu().numpy(), columns=['pred'])
@@ -434,8 +433,6 @@ def main(args):
         #print("protected attributes: {}".format(protected_attributes_all))
 
         df_binary, Y, S, Y_true, ind_dict = transform_dataset_credit(df, protected_attributes_for_optimization, protected_attributes_all)
-
-
         protected_attributes_all_indices_dict = ind_dict.copy()
         protected_attributes_cols_num = 2*len(protected_attributes_for_optimization)
         print("The protected attributes require {} columns.".format(protected_attributes_cols_num))

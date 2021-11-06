@@ -198,11 +198,13 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     #print("DF age cuttin",df.iloc[:,12])
     S = pd.DataFrame()
 
+    protected_attributes_all_indices_dict = {}
     if "age" in protected_attributes_for_optimization:
+        #S_foreign = df.iloc[:,19] == "A202"
         S_age = df.iloc[:,12] > 25
         S = pd.concat([S, pd.DataFrame(S_age)], axis=1)
     if "sex" in protected_attributes_for_optimization:
-        S_sex = df.iloc[:,8] == "A92" | df.iloc[:,8] == "A95"
+        S_sex = df.iloc[:,8] == "A91" | df.iloc[:,8] == "A93" | df.iloc[:,8] == "A94"
         S = pd.concat([S, pd.DataFrame(S_sex)], axis=1)
 
     #del df["Age"]
@@ -214,25 +216,40 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     print("Credit Dataset Shape")
     print(df_replace.shape)
     print(" ")
+    #print(df_replace.head())
+
     #transform other features
     #feature age to normalize
-    encoded_feature = df_replace.to_numpy()[:, 1]
-    mi = np.amin(encoded_feature)
-    ma = np.amax(encoded_feature)
-    encoded_feature = (encoded_feature - mi) / (ma - mi)
+    # encoded_feature = df_replace.to_numpy()[:, 1]
+    # mi = np.amin(encoded_feature)
+    # ma = np.amax(encoded_feature)
+    # encoded_feature = (encoded_feature - mi) / (ma - mi)
+    encod_feature = df_replace.iloc[:,1] > 25
+    encoded_feature = pd.get_dummies(encod_feature)
+    df_binary_encoded = pd.DataFrame(encoded_feature)
+    if "age" in protected_attributes_all:
+        protected_attributes_all_indices_dict["age"] = df_binary_encoded.shape[1] - 1
 
     #df_binary_encoded is the data frame containing encoded features
-    df_binary_encoded = pd.DataFrame(encoded_feature)
     #print("The df is", df)
 
     # categorical attributes
-    for i in [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18, 19]:
+    for i in [0, 2, 3, 5, 6, 9, 11, 13, 14, 16, 18, 19]:
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
+        # if i == 19 and "age" in protected_attributes_all:
+        #     protected_attributes_all_indices_dict["foreign"] = df_binary_encoded.shape[1] - 1
+
+    # sex attribute
+    encod_feature = (df_replace.iloc[:,8] == "A91") | (df_replace.iloc[:,8] == "A93") | (df_replace.iloc[:,8] == "A94")
+    encoded_feature = pd.get_dummies(encod_feature)
+    df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
+    if "sex" in protected_attributes_all:
+        protected_attributes_all_indices_dict["sex"] = df_binary_encoded.shape[1] - 1
 
     # Numerical attributes
-    for i in [1, 7, 10, 15, 17]:
+    for i in [7, 10, 15, 17]:
         encod_feature = df_replace.iloc[:,i]
         mi = np.amin(encod_feature)
         ma = np.amax(encod_feature)
@@ -240,11 +257,6 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
     #print("S is",S)
-    protected_attributes_all_indices_dict = {}
-    if "age" in protected_attributes_all:
-        protected_attributes_all_indices_dict["age"] = 12
-    if "sex" in protected_attributes_all:
-        protected_attributes_all_indices_dict["sex"] = 8
 
     #print("This part is done")
     return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
