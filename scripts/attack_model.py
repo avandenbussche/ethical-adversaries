@@ -5,7 +5,8 @@ from sklearn import preprocessing
 import logging
 logger = logging.getLogger(__name__)
 
-def transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all):
+
+def transform_dataset(df):
     """
 
     :param df:
@@ -25,28 +26,22 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary[protected_attributes_for_optimization]
-    #S = df_binary['race']
+    S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
 
-    print("COMPAS DATASET SHAPE")
     print(df_binary.shape)
-    print(" ")
 
     # set sparse to False to return dense matrix after transformation and keep all dimensions homogeneous
     encod = preprocessing.OneHotEncoder(sparse=False)
 
     data_to_encode = df_binary.to_numpy()
-    feat_to_encode = data_to_encode[:, 0] == "Male"
-    #print(feat_to_encode)
+    feat_to_encode = data_to_encode[:, 0]
+    # print(feat_to_encode)
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
-    #print(feat_to_encode)
+    # print(feat_to_encode)
     encoded_feature = encod.fit_transform(feat_to_encode)
-    #print(encoded_feature)
-    # first one-hot column is female true
-    # second one-hot column is male true
 
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -60,8 +55,6 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     feat_to_encode = data_to_encode[:, 2] == "Caucasian"
     feat_to_encode = feat_to_encode.reshape(-1, 1)
     encoded_feature = encod.fit_transform(feat_to_encode)
-    # first one-hot column is african-american true
-    # second one-hot column is caucasian true
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
@@ -86,15 +79,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    protected_attributes_all_indices_dict = {}
-    for protected_attribute in protected_attributes_all:
-        protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
-
-    # print("Shape of df_binary_encoded: {}".format(df_binary_encoded.shape))
-    # print("Shape of S: {}".format(S.shape))
-    # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
-
-    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
+    return df_binary_encoded, Y, S, Y_true
 
 def transform_dataset_census(df):
     """
@@ -131,9 +116,7 @@ def transform_dataset_census(df):
     if df_replace.shape == df.shape:
         raise AssertionError("The removal of na values failed")
 
-    print("CENSUS DATASET SHAPE")
     print(df_replace.shape)
-    print(" ")
 
     #transform other features
     #feature age to normalize
@@ -141,7 +124,7 @@ def transform_dataset_census(df):
     mi = np.amin(encoded_feature)
     ma = np.amax(encoded_feature)
     encoded_feature = (encoded_feature - mi) / (ma - mi)
-    
+
     #df_binary_encoded is the data frame containing encoded features
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -158,7 +141,7 @@ def transform_dataset_census(df):
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
-    
+
     #feature 10 and 11 are categorical
     for i in range(10,12):
         encod_feature = df_replace.iloc[:,i]
@@ -168,7 +151,7 @@ def transform_dataset_census(df):
     return df_binary_encoded, Y, S, Y_true
 
 
-def transform_dataset_credit(df):
+def transform_dataset_credit(df, protected_attributes_for_optimization, protected_attributes_all):
     """
     For more info on the features:
     https://archive.ics.uci.edu/ml/datasets/Statlog+%28German+Credit+Data%29
@@ -190,18 +173,20 @@ def transform_dataset_credit(df):
     Y_true=[]
 
     #S is the protected attribute
+    #note age is the protected attribute here
+    #binary if one is young or old
     S=df.iloc[:,12] > 25
+    if protected_attributes_for_optimization == "Age":
+        S=df.iloc[:,12] > 25
     #del df["Age"]
 
     #remove examples with missing values
     df_replace = df.replace(to_replace="?",value=np.nan)
     df_replace.dropna(inplace=True, axis=1)
 
-    print("CREDIT DATASET SHAPE")
+    print("Credit Dataset Shape")
     print(df_replace.shape)
     print(" ")
-
-
     #transform other features
     #feature age to normalize
     encoded_feature = df_replace.to_numpy()[:, 1]
@@ -226,7 +211,13 @@ def transform_dataset_credit(df):
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    return df_binary_encoded, Y, S, Y_true
+    print(S)
+
+    protected_attributes_all_indices_dict = {}
+    for protected_attribute in protected_attributes_all:
+        protected_attributes_all_indices_dict[protected_attribute] = df_binary_encoded.columns.get_loc(protected_attribute)
+
+    return df_binary_encoded, Y, S, Y_true,protected_attributes_all_indices_dict
 
 
 def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):
@@ -363,6 +354,7 @@ def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):
 if __name__ == '__main__':
     df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
     df, Y, S = transform_dataset(df)
+
 
     result = attack_keras_model(df, Y=Y, S=S)
 

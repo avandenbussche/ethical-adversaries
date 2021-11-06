@@ -377,9 +377,26 @@ def main(args):
         l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
     elif args.dataset == "german":
         ##load the census income data set instead of the COMPAS one
+       ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
-        df_binary, Y, S, _ = transform_dataset_credit(df)
-        l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("protected attributes: {}".format(protected_attributes_all))
+
+        df_binary, Y, S, _ = transform_dataset_credit(df, protected_attributes_for_optimization, protected_attributes_all)
+
+
+        protected_attributes_all_indices_dict = ind_dict.copy()
+        protected_attributes_cols_num = 2*len(protected_attributes_for_optimization)
+        print("The protected attributes require {} columns.".format(protected_attributes_cols_num))
+        print("ALL PROTECTED ATTRIBUTES")
+        print(S)
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
+        print(" ")
+
+        Y=Y.to_numpy()
+        #l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     else:
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
@@ -459,7 +476,7 @@ def main(args):
         y_train_tensor = torch.cat(
             (y_train_tensor, torch.tensor(result_class.reshape(-1, 1).astype(np.float32)).clamp(0, 10)))
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
-        
+
         # Generate array of random s values, one column per number of protected attributes
         s = np.random.randint(2, size=(len(result_class), len(protected_attributes_for_optimization)))
         s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), protected_attributes_cols_num).astype(np.float64))))
