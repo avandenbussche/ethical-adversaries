@@ -6,9 +6,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def transform_dataset(df):
+def transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all):
     """
-
     :param df:
     :return: Tuple of the transformed dataset and the labels Y and S
     """
@@ -26,22 +25,28 @@ def transform_dataset(df):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary['race']
+    S = df_binary[protected_attributes_for_optimization]
+    #S = df_binary['race']
     #del df_binary['race']
     #del df_binary['is_recid']
 
+    print("COMPAS DATASET SHAPE")
     print(df_binary.shape)
+    print(" ")
 
     # set sparse to False to return dense matrix after transformation and keep all dimensions homogeneous
     encod = preprocessing.OneHotEncoder(sparse=False)
 
     data_to_encode = df_binary.to_numpy()
-    feat_to_encode = data_to_encode[:, 0]
-    # print(feat_to_encode)
+    feat_to_encode = data_to_encode[:, 0] == "Male"
+    #print(feat_to_encode)
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
-    # print(feat_to_encode)
+    #print(feat_to_encode)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    #print(encoded_feature)
+    # first one-hot column is female true
+    # second one-hot column is male true
 
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -55,6 +60,8 @@ def transform_dataset(df):
     feat_to_encode = data_to_encode[:, 2] == "Caucasian"
     feat_to_encode = feat_to_encode.reshape(-1, 1)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    # first one-hot column is african-american true
+    # second one-hot column is caucasian true
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
@@ -79,7 +86,17 @@ def transform_dataset(df):
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    return df_binary_encoded, Y, S, Y_true
+    protected_attributes_all_indices_dict = {}
+    for protected_attribute in protected_attributes_all:
+        protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
+
+    # print("Shape of df_binary_encoded: {}".format(df_binary_encoded.shape))
+    # print("Shape of S: {}".format(S.shape))
+    # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
+
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
+
+
 
 def transform_dataset_census(df):
     """
@@ -163,8 +180,10 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     label_encoder = preprocessing.LabelEncoder()
     oh_encoder = preprocessing.OneHotEncoder(sparse=False)
 
+    #print("German dataset is", df)
+    #print("Y info is",df.iloc[:,-1])
     Y = np.array(df.iloc[:,-1] == 2)
-
+    #print("Y is " ,Y)
     ##Y_true is the vector containing labels, at this point, labels (initially strings) have been transformed into integer (0 and 1) -> -5000 is now '0' and 5000+ is now '+1'
     #remove last column from df
     del df[df.columns[-1]]
@@ -175,7 +194,10 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
     #S is the protected attribute
     #note age is the protected attribute here
     #binary if one is young or old
+
+    #print("DF age cuttin",df.iloc[:,12])
     S=df.iloc[:,12] > 25
+
     if protected_attributes_for_optimization == "Age":
         S=df.iloc[:,12] > 25
     #del df["Age"]
@@ -196,6 +218,7 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
 
     #df_binary_encoded is the data frame containing encoded features
     df_binary_encoded = pd.DataFrame(encoded_feature)
+    #print("The df is", df)
 
     # categorical attributes
     for i in [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18,19]:
@@ -211,12 +234,14 @@ def transform_dataset_credit(df, protected_attributes_for_optimization, protecte
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    print(S)
-
+    #print("S is",S)
     protected_attributes_all_indices_dict = {}
     for protected_attribute in protected_attributes_all:
-        protected_attributes_all_indices_dict[protected_attribute] = df_binary_encoded.columns.get_loc(protected_attribute)
-
+        #print("protected_attribute is", protected_attribute)
+        if protected_attribute == "Sex":
+            index = 8
+            protected_attributes_all_indices_dict[protected_attribute] = df.iloc[:,index]
+    #print("This part is done")
     return df_binary_encoded, Y, S, Y_true,protected_attributes_all_indices_dict
 
 

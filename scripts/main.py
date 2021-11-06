@@ -379,10 +379,10 @@ def main(args):
         ##load the census income data set instead of the COMPAS one
        ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
-        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
-        print("protected attributes: {}".format(protected_attributes_all))
+        #print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        #print("protected attributes: {}".format(protected_attributes_all))
 
-        df_binary, Y, S, _ = transform_dataset_credit(df, protected_attributes_for_optimization, protected_attributes_all)
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset_credit(df, protected_attributes_for_optimization, protected_attributes_all)
 
 
         protected_attributes_all_indices_dict = ind_dict.copy()
@@ -393,8 +393,9 @@ def main(args):
         print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
         print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
         print(" ")
-
+        #print("Y is", Y)
         Y=Y.to_numpy()
+        
         #l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     else:
