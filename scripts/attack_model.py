@@ -96,7 +96,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
-def transform_dataset_census(df):
+def transform_dataset_census(df, protected_attributes_for_optimization, protected_attributes_all):
     """
 
     :param df: the dataset "census income" from a csv file with reduced features, heterogeneous types and missing values, no header
@@ -118,8 +118,8 @@ def transform_dataset_census(df):
 
     #S is the protected attribute
     # could also be feature 7 (sex) or feature 13 (citizenship)
-    S=df["sex"]
-    del df["sex"]
+    S=df[protected_attributes_for_optimization]
+    #del df["sex"]
 
     #remove feature fnlwgt
     del df["fnlwgt"]
@@ -146,26 +146,41 @@ def transform_dataset_census(df):
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
     #feature 1 to 7 (after removal) are categorical
-    for i in range(1,8):
+    #features: workclass, education, education.num, marital.status, occupation, relationship
+    for i in range(1,6):
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    #feature 8 and 9 are numerical
-    for i in range(8,10):
+    # prepare race
+    encod_feature = df_replace.iloc[:,7] == "White"
+    encoded_feature = pd.get_dummies(encod_feature)
+    df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
+
+    # prepare sex
+    encod_feature = df_replace.iloc[:,8] == "Male"
+    encoded_feature = pd.get_dummies(encod_feature)
+    df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
+
+    #feature 9 and 10 are numerical
+    for i in range(9,11):
         encod_feature = df_replace.iloc[:,i]
         mi = np.amin(encod_feature)
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
     
-    #feature 10 and 11 are categorical
-    for i in range(10,12):
+    #feature 11 and 12 are categorical
+    for i in range(11,13):
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    return df_binary_encoded, Y, S, Y_true
+    protected_attributes_all_indices_dict = {}
+    for protected_attribute in protected_attributes_all:
+        protected_attributes_all_indices_dict[protected_attribute] = df.columns.get_loc(protected_attribute)
+
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
 
 def transform_dataset_credit(df):

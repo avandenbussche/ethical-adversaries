@@ -37,6 +37,7 @@ protected_attributes_for_comparison = []
 protected_attributes_all = []
 protected_attributes_all_indices_dict = {}
 protected_attributes_cols_num = 0
+dataset_model_num_hidden_units = 32
 
 class GradientReversalFunction(Function):
     """
@@ -74,13 +75,13 @@ class Net(nn.Module):
         super(Net, self).__init__()
         # an affine operation: y = Wx + b
         self._grl_lambda = grl_lambda
-        self.fc1 = nn.Linear(input_shape, 32)
-        self.fc2 = nn.Linear(32, 32)
-        self.fc3 = nn.Linear(32, 32)
-        self.fc4 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(input_shape, dataset_model_num_hidden_units)
+        self.fc2 = nn.Linear(dataset_model_num_hidden_units, dataset_model_num_hidden_units)
+        self.fc3 = nn.Linear(dataset_model_num_hidden_units, dataset_model_num_hidden_units)
+        self.fc4 = nn.Linear(dataset_model_num_hidden_units, 1)
         if self._grl_lambda != 0:
             self.grl = GradientReversal(grl_lambda)
-            self.fc5 = nn.Linear(32, protected_attributes_cols_num)
+            self.fc5 = nn.Linear(dataset_model_num_hidden_units, protected_attributes_cols_num)
         # self.grl = GradientReversal(100)
 
     def forward(self, x):
@@ -350,6 +351,7 @@ def main(args):
     global protected_attributes_all
     global protected_attributes_all_indices_dict
     global protected_attributes_cols_num
+    global dataset_model_num_hidden_units
     protected_attributes_for_optimization = args.optimize_attribute.split(',')
     protected_attributes_for_comparison = []
     for a in args.measure_attribute:
@@ -370,16 +372,19 @@ def main(args):
         print(" ")
         Y = Y.to_numpy()
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
+        dataset_model_num_hidden_units = 32
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
         df_binary, Y, S, _ = transform_dataset_census(df)
         l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        dataset_model_num_hidden_units = 128
     elif args.dataset == "german":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "german.data"), header=None, sep="\s")
         df_binary, Y, S, _ = transform_dataset_credit(df)
         l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
+        dataset_model_num_hidden_units = 32
     else:
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
