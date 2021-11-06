@@ -376,7 +376,9 @@ def main(args):
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit", "adult.csv"))
-        df_binary, Y, S, _ = transform_dataset_census(df)
+        df_binary, Y, S, _, ind_dict = transform_dataset_census(df, protected_attributes_for_optimization, protected_attributes_all)
+        protected_attributes_all_indices_dict = ind_dict.copy()
+        protected_attributes_cols_num = 2*len(protected_attributes_for_optimization)
         l_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
         dataset_model_num_hidden_units = 128
     elif args.dataset == "german":

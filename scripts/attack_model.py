@@ -134,6 +134,7 @@ def transform_dataset_census(df, protected_attributes_for_optimization, protecte
     print("CENSUS DATASET SHAPE")
     print(df_replace.shape)
     print(" ")
+    #print(df_replace.head())
 
     #transform other features
     #feature age to normalize
@@ -145,33 +146,35 @@ def transform_dataset_census(df, protected_attributes_for_optimization, protecte
     #df_binary_encoded is the data frame containing encoded features
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
-    #feature 1 to 7 (after removal) are categorical
-    #features: workclass, education, education.num, marital.status, occupation, relationship
-    for i in range(1,6):
+    #feature 1 to 6 (after removal) are categorical
+    # features: education, education.num, marital.status, relationship
+    for i in range(1,5):
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
     # prepare race
-    encod_feature = df_replace.iloc[:,7] == "White"
+    encod_feature = df_replace.iloc[:,5] == "White"
     encoded_feature = pd.get_dummies(encod_feature)
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
     # prepare sex
-    encod_feature = df_replace.iloc[:,8] == "Male"
+    encod_feature = df_replace.iloc[:,6] == "Male"
     encoded_feature = pd.get_dummies(encod_feature)
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    #feature 9 and 10 are numerical
-    for i in range(9,11):
+    #features 7 and 8 (after removal) are numerical
+    # features: capital.gain and capital.loss
+    for i in range(7,9):
         encod_feature = df_replace.iloc[:,i]
         mi = np.amin(encod_feature)
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
     
-    #feature 11 and 12 are categorical
-    for i in range(11,13):
+    #feature 9 (after removal) is categorical
+    # features: hours.per.week
+    for i in range(9,10):
         encod_feature = df_replace.iloc[:,i]
         encoded_feature = pd.get_dummies(encod_feature)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
