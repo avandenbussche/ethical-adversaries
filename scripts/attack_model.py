@@ -26,9 +26,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     del df_binary['score_text']
 
     S = df_binary[protected_attributes_for_optimization]
-    #S = df_binary['race']
-    #del df_binary['race']
-    #del df_binary['is_recid']
+
 
     print("COMPAS DATASET SHAPE")
     print(df_binary.shape)
@@ -39,12 +37,9 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
 
     data_to_encode = df_binary.to_numpy()
     feat_to_encode = data_to_encode[:, 0] == "Male"
-    #print(feat_to_encode)
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
-    #print(feat_to_encode)
     encoded_feature = encod.fit_transform(feat_to_encode)
-    #print(encoded_feature)
     # first one-hot column is female true
     # second one-hot column is male true
 
@@ -90,9 +85,7 @@ def transform_dataset(df, protected_attributes_for_optimization, protected_attri
     for protected_attribute in protected_attributes_all:
         protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
 
-    # print("Shape of df_binary_encoded: {}".format(df_binary_encoded.shape))
-    # print("Shape of S: {}".format(S.shape))
-    # print("First row of df_binary_encoded: {}".format(df_binary_encoded.head(1).values))
+
 
     return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
@@ -259,10 +252,8 @@ def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):
     # Use training set for the classifier and then pick points from an internal test set.
     tr_set_secML, ts_set_secML = splitter.split(data_set_encoded_secML)
 
-    # tr_set_secML = CDataset(X_train,Y_train)
-    # ts_set_secML = CDataset(X_test,Y_test)
 
-    # Create a surrogate classifier
+
 
     # Creation of the multiclass classifier
     from secml.ml.classifiers import CClassifierSVM
