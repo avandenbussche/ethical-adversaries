@@ -11,10 +11,10 @@
 
 # Ethical adversaries
 
-Our framework as described in for our paper ["Ethical Adversaries: Towards Mitigating Unfairness with Adversarial Machine Learning" on arXiv »](https://arxiv.org/abs/2005.06852)
+Our framework follows the work described in Delobelle et al's paper ["Ethical Adversaries: Towards Mitigating Unfairness with Adversarial Machine Learning" on arXiv »](https://arxiv.org/abs/2005.06852)
 
 # Get started
-You can replicate the experiments from [our paper](https://arxiv.org/abs/2005.06852) by following the following steps.
+You can replicate the experiments from our  by following the following steps.
 You can install the required dependencies:
 install using [Pipenv](https://pipenv.readthedocs.io/en/latest/) *(install by running `pip install pipenv` in your terminal)* by running `pipenv install`.
 
@@ -23,14 +23,18 @@ move to the src dir and run (for COMPAS):
 $ python main.py --epochs 50 --grl-lambda 50 --batch-size 128 --attack-size 10 --dataset compas --iterations 50 --save-dir ../results
 ```
 
-We support 3 datasets that are in the repo, with the parameter: 
+We support the COMPAS dataset which is in the repo, with the parameter: 
 
 - COMPAS: `--dataset compas `
-- Adult: `--dataset adult`
-- German Credit: `--dataset credit`
 
-For the settings of the hyper-parameters, we refer to our paper.
 
+# Hyper-Parameters
+
+ We sought to render all of our modifications accessible via the original codebase’s commandline interface. For example, to set the protected attributes to optimize and measure against, respectively, the user couldset the following arguments:
+ 
+ –optimize-attribute "sex,race"
+ –measure-attribute "sex"
+ –measure-attribute "race
 
 # The Ethical Adversaries framework
 
@@ -38,6 +42,10 @@ For the settings of the hyper-parameters, we refer to our paper.
 
 ## Structure
 Our framework uses a Feeder and an adversarial Reader. More info can be found in the [paper »](https://arxiv.org/abs/2005.06852)
+
+
+
+
 
 ## What can be found in this repo?
 
@@ -60,12 +68,3 @@ We release our models and this code under MIT.
 
 Even though MIT doesn't require it, we would like to ask if you could nevertheless cite our paper if it helped you!
 
-```
-@misc{delobelle2020ethical,
-    title={Ethical Adversaries: Towards Mitigating Unfairness with Adversarial Machine Learning},
-    author={Pieter Delobelle and Paul Temple and Gilles Perrouin and Benoît Frénay and Patrick Heymans and Bettina Berendt},
-    year={2020},
-    eprint={2005.06852},
-    archivePrefix={arXiv},
-    primaryClass={cs.LG}
-}
