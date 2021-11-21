@@ -81,7 +81,6 @@ class Net(nn.Module):
         if self._grl_lambda != 0:
             self.grl = GradientReversal(grl_lambda)
             self.fc5 = nn.Linear(32, protected_attributes_cols_num)
-        # self.grl = GradientReversal(100)
 
     def forward(self, x):
         hidden = self.fc1(x)
@@ -89,13 +88,11 @@ class Net(nn.Module):
         hidden = F.dropout(hidden, 0.1)
 
         y = self.fc4(hidden)
-        # y = F.dropout(y, 0.1)
 
         if self._grl_lambda != 0:
             s = self.grl(hidden)
             s = self.fc5(s)
-            # s = F.sigmoid(s)
-            # s = F.dropout(s, 0.1)
+
             return y, s
         else:
             return y
@@ -206,7 +203,6 @@ def train_and_evaluate(train_loader: DataLoader,
     validation_losses = []
 
     t_prog = trange(args.epochs, desc='Training neural network', leave=False, position=1, mininterval=5)
-    # t_prog = trange(50)
 
     for epoch in t_prog:
         model.train()
@@ -292,7 +288,6 @@ def train_and_evaluate(train_loader: DataLoader,
                 test_losses.append(val_loss)
                 test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "x": x_test})
 
-        # print({"Test loss": np.mean(test_losses)})
 
     results = test_results[0]['y_hat']
     outcome = test_results[0]['y_true']
@@ -310,9 +305,7 @@ def train_and_evaluate(train_loader: DataLoader,
         if grl_lambda is not None and grl_lambda != 0:
             protected = torch.cat((protected, r['s_hat']))
 
-    # print("Shape of x: {}".format(x.shape))
-    # print("Shape of protected_results: {}".format(protected_results.shape))
-    # print("First row of x: {}".format(x[0]))
+
 
     df = pd.DataFrame(data=results.cpu().numpy(), columns=['pred'])
 
@@ -355,7 +348,7 @@ def main(args):
     for a in args.measure_attribute:
         protected_attributes_for_comparison.append(a.split(','))
     protected_attributes_all = list(set(flatten(protected_attributes_for_optimization) + flatten(protected_attributes_for_comparison)))
-
+    #code block where we take in the optimized, measured attributes
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
@@ -369,6 +362,7 @@ def main(args):
         print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
         print(" ")
         Y = Y.to_numpy()
+        #we reshape the data accordingly 
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
@@ -509,6 +503,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset-attack', help="Reuse the same model if False.", default=False, type=bool)
     parser.add_argument('--dataset', help="The data set to use; values: compas or adult", default="compas", type=str)
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
+    #expanded parameters for modularity
     parser.add_argument('--optimize-attribute', help='Attribute(s) to optimize fairness against', required=True, type=str)
     parser.add_argument('--measure-attribute', action='append', help='Attribute(s) to measure fairness against', type=str)
     args = parser.parse_args()
