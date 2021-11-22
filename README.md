@@ -32,7 +32,7 @@ We support the COMPAS dataset which is in the repo, with the parameter:
 
 
 ## Structure
-Our framework uses a Feeder and an adversarial Reader which . More info can be found in our paper.
+Our framework uses a Feeder and an adversarial Reader. More info can be found in our paper `Vigilant Intersectionality: Exposing Unfairness of Ethically Adversarially Trained Models Considerng Multiple Protected Attributes`.
 
 
 
