@@ -5,8 +5,7 @@ from sklearn import preprocessing
 import logging
 logger = logging.getLogger(__name__)
 
-
-def transform_dataset(df):
+def transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all):
     """
 
     :param df:
@@ -26,22 +25,23 @@ def transform_dataset(df):
     del df_binary['two_year_recid']
     del df_binary['score_text']
 
-    S = df_binary['race']
-    #del df_binary['race']
-    #del df_binary['is_recid']
+    S = df_binary[protected_attributes_for_optimization]
 
+
+    print("COMPAS DATASET SHAPE")
     print(df_binary.shape)
+    print(" ")
 
     # set sparse to False to return dense matrix after transformation and keep all dimensions homogeneous
     encod = preprocessing.OneHotEncoder(sparse=False)
 
     data_to_encode = df_binary.to_numpy()
-    feat_to_encode = data_to_encode[:, 0]
-    # print(feat_to_encode)
+    feat_to_encode = data_to_encode[:, 0] == "Male"
     # transposition
     feat_to_encode = feat_to_encode.reshape(-1, 1)
-    # print(feat_to_encode)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    # first one-hot column is female true
+    # second one-hot column is male true
 
     df_binary_encoded = pd.DataFrame(encoded_feature)
 
@@ -55,6 +55,8 @@ def transform_dataset(df):
     feat_to_encode = data_to_encode[:, 2] == "Caucasian"
     feat_to_encode = feat_to_encode.reshape(-1, 1)
     encoded_feature = encod.fit_transform(feat_to_encode)
+    # first one-hot column is african-american true
+    # second one-hot column is caucasian true
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
@@ -79,7 +81,13 @@ def transform_dataset(df):
 
     df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
 
-    return df_binary_encoded, Y, S, Y_true
+    protected_attributes_all_indices_dict = {}
+    for protected_attribute in protected_attributes_all:
+        protected_attributes_all_indices_dict[protected_attribute] = df_binary.columns.get_loc(protected_attribute)
+
+
+
+    return df_binary_encoded, Y, S, Y_true, protected_attributes_all_indices_dict
 
 def transform_dataset_census(df):
     """
@@ -116,7 +124,9 @@ def transform_dataset_census(df):
     if df_replace.shape == df.shape:
         raise AssertionError("The removal of na values failed")
 
+    print("CENSUS DATASET SHAPE")
     print(df_replace.shape)
+    print(" ")
 
     #transform other features
     #feature age to normalize
@@ -180,7 +190,10 @@ def transform_dataset_credit(df):
     df_replace = df.replace(to_replace="?",value=np.nan)
     df_replace.dropna(inplace=True, axis=1)
 
+    print("CREDIT DATASET SHAPE")
     print(df_replace.shape)
+    print(" ")
+
 
     #transform other features
     #feature age to normalize
@@ -205,8 +218,6 @@ def transform_dataset_credit(df):
         ma = np.amax(encod_feature)
         encoded_feature = (encod_feature - mi) / (ma - mi)
         df_binary_encoded = pd.concat([df_binary_encoded, pd.DataFrame(encoded_feature)], axis=1)
-
-    print(S)
 
     return df_binary_encoded, Y, S, Y_true
 
@@ -241,10 +252,8 @@ def attack_keras_model(X, Y, S, nb_attack=25, dmax=0.1):
     # Use training set for the classifier and then pick points from an internal test set.
     tr_set_secML, ts_set_secML = splitter.split(data_set_encoded_secML)
 
-    # tr_set_secML = CDataset(X_train,Y_train)
-    # ts_set_secML = CDataset(X_test,Y_test)
 
-    # Create a surrogate classifier
+
 
     # Creation of the multiclass classifier
     from secml.ml.classifiers import CClassifierSVM

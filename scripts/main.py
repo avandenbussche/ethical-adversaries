@@ -27,8 +27,16 @@ from pycm import ConfusionMatrix
 
 from secml.array.c_array import CArray
 
+from math import exp
+from Differential_Fairness.differential_fairness import computeSmoothedEDF
+
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
+protected_attributes_for_optimization = []
+protected_attributes_for_comparison = []
+protected_attributes_all = []
+protected_attributes_all_indices_dict = {}
+protected_attributes_cols_num = 0
 
 class GradientReversalFunction(Function):
     """
@@ -72,8 +80,7 @@ class Net(nn.Module):
         self.fc4 = nn.Linear(32, 1)
         if self._grl_lambda != 0:
             self.grl = GradientReversal(grl_lambda)
-            self.fc5 = nn.Linear(32, 2)
-        # self.grl = GradientReversal(100)
+            self.fc5 = nn.Linear(32, protected_attributes_cols_num)
 
     def forward(self, x):
         hidden = self.fc1(x)
@@ -81,13 +88,11 @@ class Net(nn.Module):
         hidden = F.dropout(hidden, 0.1)
 
         y = self.fc4(hidden)
-        # y = F.dropout(y, 0.1)
 
         if self._grl_lambda != 0:
             s = self.grl(hidden)
             s = self.fc5(s)
-            # s = F.sigmoid(s)
-            # s = F.dropout(s, 0.1)
+
             return y, s
         else:
             return y
@@ -111,6 +116,8 @@ def get_metrics(results, args, threshold, fraction):
         / bm(results).P(pred=lambda x: x > threshold).given(
             race=1))
 
+    diff_fair_optimized = computeSmoothedEDF(results[protected_attributes_for_optimization].astype(int).values, (results['pred'] > threshold).astype(int).values)
+
     cm = ConfusionMatrix(actual_vector=(results['true'] == True).values,
                          predict_vector=(results['pred'] > threshold).values)
     if args.dataset == 'compas':
@@ -128,8 +135,28 @@ def get_metrics(results, args, threshold, fraction):
                   "acc_ci_min_high_risk": cm_high_risk.CI95[0],
                   "acc_ci_max_high_risk": cm_high_risk.CI95[1],
                   "f1_high_risk": cm_high_risk.F1_Macro,
-                  "adversarial_fraction": fraction
+                  "adversarial_fraction": fraction,
+                  "DF (O: {})".format(protected_attributes_for_optimization): diff_fair_optimized,
+                  "DFR (O: {})".format(protected_attributes_for_optimization): exp(-diff_fair_optimized),
                   }
+
+        for s in protected_attributes_for_comparison:
+            diff_fair_s = computeSmoothedEDF(results[s].astype(int).values, (results['pred'] > threshold).astype(int).values)
+            key = "DF (C: {})".format(s)
+            key_pp = "DFR (C: {})".format(s)
+            result[key] = diff_fair_s
+            result[key_pp] = exp(-diff_fair_s)
+
+        for s1 in range(2):
+            for r1 in range(2):
+                for s2 in range(2):
+                    for r2 in range(2):
+                        if s1 == s2 and r1 == r2:
+                            continue
+                        key = "DPR (S{}R{}/S{}R{})".format(s1, r1, s2, r2)
+                        result[key] = abs( bm(results).P(pred=lambda x: x > threshold).given(race=r1, sex=s1)
+                                         / bm(results).P(pred=lambda x: x > threshold).given(race=r2, sex=s2) )
+
     else:
         result = {"DP": dem_parity,
                   "EO": eq_op,
@@ -152,7 +179,6 @@ def train_and_evaluate(train_loader: DataLoader,
                        grl_lambda=None,
                        model=None):
     """
-
     :param train_loader: Pytorch-like DataLoader with training data.
     :param val_loader: Pytorch-like DataLoader with validation data.
     :param test_loader: Pytorch-like DataLoader with testing data.
@@ -177,7 +203,6 @@ def train_and_evaluate(train_loader: DataLoader,
     validation_losses = []
 
     t_prog = trange(args.epochs, desc='Training neural network', leave=False, position=1, mininterval=5)
-    # t_prog = trange(50)
 
     for epoch in t_prog:
         model.train()
@@ -194,7 +219,9 @@ def train_and_evaluate(train_loader: DataLoader,
             # forward + backward + optimize
             if grl_lambda is not None and grl_lambda != 0:
                 outputs, outputs_protected = model(x_batch)
-                loss = criterion(outputs, y_batch) + criterion_bias(outputs_protected, s_batch.argmax(dim=1))
+                loss = criterion(outputs, y_batch)
+                for i in range(len(protected_attributes_for_optimization)):
+                    loss += criterion_bias(outputs_protected[:, (2*i):(2*i+2)], s_batch[:, (2*i):(2*i+2)].argmax(dim=1))
             else:
                 outputs = model(x_batch)
                 loss = criterion(outputs, y_batch)
@@ -215,7 +242,10 @@ def train_and_evaluate(train_loader: DataLoader,
                 model.eval()
                 if grl_lambda is not None and grl_lambda != 0:
                     yhat, s_hat = model(x_val)
-                    val_loss = (criterion(y_val, yhat) + criterion_bias(s_val, s_hat.argmax(dim=1))).item()
+                    val_loss = criterion(y_val, yhat)
+                    for i in range(len(protected_attributes_for_optimization)):
+                        val_loss += criterion_bias(s_val[:, (2*i):(2*i+2)], s_hat[:, (2*i):(2*i+2)].argmax(dim=1))
+                    val_loss = val_loss.item()
                 else:
                     yhat = model(x_val)
                     val_loss = criterion(y_val, yhat).item()
@@ -229,12 +259,13 @@ def train_and_evaluate(train_loader: DataLoader,
                             "validation_loss": validation_loss}, refresh=False)  # print last metrics
 
     if args.show_graphs:
-        plt.plot(range(len(training_losses)), training_losses)
-        plt.plot(range(len(validation_losses)), validation_losses)
-        # plt.scatter(x_tensor, y_out.detach().numpy())
-        plt.ylabel('some numbers')
+        plt.plot(range(len(training_losses)), training_losses, label="Training Loss")
+        plt.plot(range(len(validation_losses)), validation_losses, label="Validation Loss")
+        plt.title('Loss vs Epoch')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend()
         plt.show()
-
     with torch.no_grad():
         test_losses = []
         test_results = []
@@ -242,24 +273,27 @@ def train_and_evaluate(train_loader: DataLoader,
             x_test = x_test.to(device)
             y_test = y_test.to(device)
             s_true = s_true.to(device)
+
             model.eval()
             if grl_lambda is not None and grl_lambda != 0:
                 yhat, s_hat = model(x_test)
-                test_loss = (criterion(y_test, yhat) + criterion_bias(s_true, s_hat.argmax(dim=1))).item()
+                test_loss = criterion(y_test, yhat)
+                for i in range(len(protected_attributes_for_optimization)):
+                    test_loss += criterion_bias(s_true[:, (2*i):(2*i+2)], s_hat[:, (2*i):(2*i+2)].argmax(dim=1))
                 test_losses.append(val_loss)
-                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "s_hat": s_hat})
+                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "s_hat": s_hat, "x": x_test})
             else:
                 yhat = model(x_test)
                 test_loss = (criterion(y_test, yhat)).item()
                 test_losses.append(val_loss)
-                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true})
+                test_results.append({"y_hat": yhat, "y_true": ytrue, "y_compas": y_test, "s": s_true, "x": x_test})
 
-        # print({"Test loss": np.mean(test_losses)})
 
     results = test_results[0]['y_hat']
     outcome = test_results[0]['y_true']
     compas = test_results[0]['y_compas']
     protected_results = test_results[0]['s']
+    x = test_results[0]['x']
     if grl_lambda is not None and grl_lambda != 0:
         protected = test_results[0]['s_hat']
     for r in test_results[1:]:
@@ -267,19 +301,33 @@ def train_and_evaluate(train_loader: DataLoader,
         outcome = torch.cat((outcome, r['y_true']))
         compas = torch.cat((compas, r['y_compas']))
         protected_results = torch.cat((protected_results, r['s']))
+        x = torch.cat((x, r['x']))
         if grl_lambda is not None and grl_lambda != 0:
             protected = torch.cat((protected, r['s_hat']))
+
+
 
     df = pd.DataFrame(data=results.cpu().numpy(), columns=['pred'])
 
     df['true'] = outcome.cpu().numpy()
     df['compas'] = compas.cpu().numpy()
-    df['race'] = protected_results.cpu().numpy()[:, 0]
+    for index, protected_attribute in enumerate(protected_attributes_for_optimization):
+        df[protected_attribute] = protected_results.cpu().numpy()[:, 2*index]
+    for unprotected_attribute in set(protected_attributes_all).difference(set(protected_attributes_for_optimization)):
+        df[unprotected_attribute] = x.cpu().numpy()[:, protected_attributes_all_indices_dict[unprotected_attribute]]
     if grl_lambda is not None and grl_lambda != 0:
-        df['race_hat'] = protected.cpu().numpy()[:, 0]
+        for index, protected_attribute in enumerate(protected_attributes_for_optimization):
+            df[protected_attribute+"_hat"] = protected.cpu().numpy()[:, index]
 
     return model, df
 
+# flatten(...) from https://stackoverflow.com/a/17867797
+def flatten(A):
+    rt = []
+    for i in A:
+        if isinstance(i,list): rt.extend(flatten(i))
+        else: rt.append(i)
+    return rt
 
 def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -290,11 +338,31 @@ def main(args):
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', None)
 
+    global protected_attributes_for_optimization
+    global protected_attributes_for_comparison
+    global protected_attributes_all
+    global protected_attributes_all_indices_dict
+    global protected_attributes_cols_num
+    protected_attributes_for_optimization = args.optimize_attribute.split(',')
+    protected_attributes_for_comparison = []
+    for a in args.measure_attribute:
+        protected_attributes_for_comparison.append(a.split(','))
+    protected_attributes_all = list(set(flatten(protected_attributes_for_optimization) + flatten(protected_attributes_for_comparison)))
+    #code block where we take in the optimized, measured attributes
     if args.dataset == "compas":
         df = pd.read_csv(os.path.join("..", "data", "csv", "scikit",
                                       "compas_recidive_two_years_sanitize_age_category_jail_time_decile_score.csv"))
-        df_binary, Y, S, Y_true = transform_dataset(df)
+        df_binary, Y, S, Y_true, ind_dict = transform_dataset(df, protected_attributes_for_optimization, protected_attributes_all)
+        protected_attributes_all_indices_dict = ind_dict.copy()
+        protected_attributes_cols_num = 2*len(protected_attributes_for_optimization)
+        print("The protected attributes require {} columns.".format(protected_attributes_cols_num))
+        print("ALL PROTECTED ATTRIBUTES")
+        print(S)
+        print("Optimized protected attributes: {}".format(protected_attributes_for_optimization))
+        print("Compared protected attributes: {}".format(protected_attributes_for_comparison))
+        print(" ")
         Y = Y.to_numpy()
+        #we reshape the data accordingly 
         l_tensor = torch.tensor(Y_true.to_numpy().reshape(-1, 1).astype(np.float32))
     elif args.dataset == "adult":
         ##load the census income data set instead of the COMPAS one
@@ -310,11 +378,13 @@ def main(args):
         raise ValueError(
             "The value given to the --dataset parameter is not valid; try --dataset=compas or --dataset=adult")
 
+    print("MEAN")
     print(np.mean(Y))
+    print(" ")
 
     x_tensor = torch.tensor(df_binary.to_numpy().astype(np.float32))
     y_tensor = torch.tensor(Y.reshape(-1, 1).astype(np.float32))
-    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, 1)).toarray())
+    s_tensor = torch.tensor(preprocessing.OneHotEncoder().fit_transform(np.array(S).reshape(-1, len(protected_attributes_for_optimization))).toarray())
 
     dataset = TensorDataset(x_tensor, y_tensor, l_tensor, s_tensor)  # dataset = CustomDataset(x_tensor, y_tensor)
 
@@ -340,14 +410,18 @@ def main(args):
     _, results = train_and_evaluate(train_loader, val_loader, test_loader, device, args, input_shape=x_tensor.shape[1],
                                     grl_lambda=0)
 
+    print("RESULTS")
     print(results)
+    print(" ")
 
     result = get_metrics(results, args, threshold, 0)
     global_results.append(result)
 
     df = pd.DataFrame(global_results)
 
+    print("DF -1")
     print(df)
+    print(" ")
 
     t_main = trange(args.iterations, desc="Attack", leave=False, position=0)
 
@@ -379,8 +453,10 @@ def main(args):
         y_train_tensor = torch.cat(
             (y_train_tensor, torch.tensor(result_class.reshape(-1, 1).astype(np.float32)).clamp(0, 10)))
         l_train_tensor = torch.cat((l_train_tensor, torch.tensor(labels.tondarray().reshape(-1, 1).astype(np.float32))))
-        s = np.random.randint(2, size=len(result_class))
-        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.array([s, 1 - s]).T.astype(np.float64))))
+        
+        # Generate array of random s values, one column per number of protected attributes
+        s = np.random.randint(2, size=(len(result_class), len(protected_attributes_for_optimization)))
+        s_train_tensor = torch.cat((s_train_tensor, torch.tensor(np.dstack((s,1-s)).reshape(len(result_class), protected_attributes_cols_num).astype(np.float64))))
 
         train_dataset = TensorDataset(x_train_tensor, y_train_tensor, l_train_tensor, s_train_tensor)
         train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -388,7 +464,9 @@ def main(args):
 
         df = pd.DataFrame(global_results)
 
+        print("DF {}".format(i))
         print(df)
+        print(" ")
 
     # Finally save experimental data if a save dir is specified
     if args.save_dir:
@@ -425,5 +503,8 @@ if __name__ == '__main__':
     parser.add_argument('--reset-attack', help="Reuse the same model if False.", default=False, type=bool)
     parser.add_argument('--dataset', help="The data set to use; values: compas or adult", default="compas", type=str)
     parser.add_argument('--save-dir', help="Save history and setup if specified.", default=None)
+    #expanded parameters for modularity
+    parser.add_argument('--optimize-attribute', help='Attribute(s) to optimize fairness against', required=True, type=str)
+    parser.add_argument('--measure-attribute', action='append', help='Attribute(s) to measure fairness against', type=str)
     args = parser.parse_args()
     main(args)
